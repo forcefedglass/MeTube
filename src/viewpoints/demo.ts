@@ -25,14 +25,22 @@ export function demoViewpoints(): Viewpoint[] {
     newViewpoint(
       'vp-demo-bubble-exit',
       'Gaming Outside My Usual Bubble',
-      `${DEMO_MARKER} — stands in for "same subject, channels I never see". Fixture approximation: unfamiliarity on, exploration high.`,
+      `${DEMO_MARKER} — stands in for "same subject, channels I never see". Seeds real acquisition via search; no topic constraints (real candidates carry no topic data until classification exists).`,
       NOW,
       {
-        seedTopics: ['topic-aero'],
-        positiveTopicConstraints: ['topic-aero'],
+        seedConcepts: ['gaming documentaries'],
         unfamiliarityTarget: 'mostly-unfamiliar',
         explorationPercent: 0.4,
         narrativeDiversityTarget: 'mixed-narratives',
+      },
+    ),
+    newViewpoint(
+      'vp-demo-aero-real',
+      'Aerospace Engineering (real acquisition)',
+      `${DEMO_MARKER} — real acquisition demo: seed topic drives a real YouTube search. Candidates come from the live search page; publication dates stay unknown because the source gives only relative dates.`,
+      NOW,
+      {
+        seedTopics: ['topic-aero'],
       },
     ),
     newViewpoint(

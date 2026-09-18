@@ -8,7 +8,7 @@
   "scripts": {
     "build": "node scripts/build-extension.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "tsc -p tsconfig.test.json && node --test \"dist-test/tests/*.test.js\"",
+    "test": "tsc -p tsconfig.test.json && node scripts/copy-test-fixtures.mjs && node --test \"dist-test/tests/*.test.js\"",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true}); require('fs').rmSync('dist-test',{recursive:true,force:true});\""
   },
   "engines": {

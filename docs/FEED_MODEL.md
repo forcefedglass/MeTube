@@ -5,7 +5,8 @@
 The MeTube feed is a **ranked slice of the discovery graph**, assembled per
 view and persisted as an immutable `FeedSnapshot`. Assembly:
 
-1. Fetch candidates from providers (over-fetch: 3× the target size).
+1. Acquire candidates (real acquisition via the candidate pool, or fixtures
+   in development/test mode; over-fetch: 3× the target size).
 2. Drop muted channels entirely (muting is exclusion, not down-ranking).
 3. Score every remaining candidate with the ranking engine.
 4. Take the top slice (target size: 8 at bootstrap).
@@ -14,18 +15,33 @@ view and persisted as an immutable `FeedSnapshot`. Assembly:
 Every snapshot records `viewpoint: {id, title} | null` — which Viewpoint
 generated it, or that it is unlensed.
 
-## Viewstreams (Phase 1)
+## Viewstreams
 
-A **Viewstream** is a feed assembled through an active Viewpoint. The
-lens applies before ranking:
+A **Viewstream** is a feed assembled through an active Viewpoint. Two
+generation paths share one assembly pipeline:
+
+- `generateViewstream` (provider-backed): asks the provider directly —
+  the fixture path and the Phase 1 default.
+- `assembleViewstream` (pool-backed): the Phase 2 extension path. The
+  caller acquires through `acquireForViewpoint` (TTL-bounded, persistent,
+  deduplicated) and passes the adapted candidates in. Repeated generation
+  serves from the pool cache; no refetch.
+
+The lens applies before ranking:
 
 1. **Hard filters** (deterministic, `src/viewpoints/interpret.ts`):
    positive topic constraints (OR), negative topic constraints (NOT),
    discovery source constraints, temporal window, and — for
    `strictly-unfamiliar` targets — explicit-feedback familiarity.
+   Candidates whose publication date is unknown (the source gave only a
+   relative date) pass when no temporal window is set and are dropped when
+   one is — the date cannot be verified, and inventing it is never an
+   option.
 2. **Channel muting** — unchanged: exclusion, not down-ranking.
 3. **Ranking with the Viewpoint's derived weights** — `weightOverrides`
    replace per-component defaults; everything else is the same engine.
+   Unknown publication dates score 0 on temporal diversity and are
+   excluded from the pool mean.
 4. **Post-selection limits** (deterministic, greedy in rank order):
    `repetitionLimit` caps items per channel; `sourceConcentrationLimit`
    caps one channel's share of the feed.
@@ -34,11 +50,12 @@ lens applies before ranking:
 
 Interpretation is pure: same config + candidates + profile → same result.
 `explorationPercent`, `unfamiliarityTarget`, `narrativeDiversityTarget`,
-`temporal` (mode), `channelSizePreferences`, `locale`, `sourceTypePreferences`,
-`seedTopics`, and `seedConcepts` are recorded and inspectable but do not yet
-change assembly at Phase 1 fidelity — they bind to real acquisition and
-ranking signals in later phases. The feed says what it did; nothing is
-inferred.
+`temporal` (mode), `channelSizePreferences`, `locale`, `sourceTypePreferences`
+are recorded and inspectable but do not yet change assembly — they bind to
+real acquisition and ranking signals in later phases. Since Phase 2,
+`seedTopics`, `seedConcepts`, `seedChannels`, and `seedPlaylists` drive
+real acquisition (search queries, channel uploads, playlists) before
+assembly. The feed says what it did; nothing is inferred.
 
 ## The ranking engine
 

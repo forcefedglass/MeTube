@@ -46,7 +46,27 @@ export async function generateViewstream(
     return emptySnapshot(now, viewpoint, 'viewpoint disabled');
   }
   const all = await provider.getCandidates({ limit: 1000 });
-  const passing = all.filter(
+  return assembleViewstream(all, { viewpoint, limit, profile }, now);
+}
+
+/**
+ * Pool-backed generation: candidates are supplied by the caller (already
+ * acquired, cached, deduped, and adapted to CandidateVideo). Used by the
+ * extension path where acquisition goes through the candidate pool.
+ */
+export async function assembleViewstream(
+  candidates: CandidateVideo[],
+  request: ViewstreamRequest,
+  now: string,
+): Promise<FeedSnapshot> {
+  const { viewpoint, limit, profile } = request;
+  if (!viewpoint.enabled) {
+    return emptySnapshot(now, viewpoint, 'viewpoint disabled');
+  }
+  const interpretation = interpretViewpoint(viewpoint.config);
+  const { filters, limits, tuning } = interpretation;
+
+  const passing = candidates.filter(
     (c) =>
       candidatePasses(c, filters) &&
       passesUnfamiliarity(c, profile, tuning.unfamiliarityTarget),
@@ -60,7 +80,7 @@ export async function generateViewstream(
   // 3. Rank with the Viewpoint's weights.
   const ranked = rankCandidates(unmuted, {
     pool: unmuted,
-    profile: request.profile,
+    profile,
     weights: tuning.weights,
   });
 
@@ -82,6 +102,7 @@ function emptySnapshot(
   viewpoint: Viewpoint,
   reason: string,
 ): FeedSnapshot {
+  void reason;
   return {
     id: `viewstream-${now}-${Math.trunc(Math.random() * 1e6).toString(36)}`,
     createdAt: now,

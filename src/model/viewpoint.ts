@@ -86,8 +86,12 @@ export interface LocalePreference {
 export interface ViewpointConfig {
   /** Seed topics — the entry points into the discovery graph. */
   seedTopics: TopicId[];
-  /** Free-text seed concepts for future search-based acquisition. */
+  /** Free-text seed concepts for search-based acquisition. */
   seedConcepts: string[];
+  /** Channel handles/urls whose uploads are explicit acquisition starts. */
+  seedChannels: string[];
+  /** Playlist ids/urls that are explicit acquisition starts. */
+  seedPlaylists: string[];
   /** Candidate must touch at least one of these topics (OR). */
   positiveTopicConstraints: TopicId[];
   /** Candidate must touch none of these topics (NOT). */
@@ -148,6 +152,8 @@ export function defaultViewpointConfig(): ViewpointConfig {
   return {
     seedTopics: [],
     seedConcepts: [],
+    seedChannels: [],
+    seedPlaylists: [],
     positiveTopicConstraints: [],
     negativeTopicConstraints: [],
     sourceConstraints: [],

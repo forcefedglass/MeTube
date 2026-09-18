@@ -225,7 +225,9 @@ const CONFIG_FIELDS: Array<{
   kind: 'text' | 'textarea' | 'number';
 }> = [
   { key: 'seedTopics', label: 'Seed topics (comma-separated topic ids)', kind: 'text' },
-  { key: 'seedConcepts', label: 'Seed concepts (comma-separated)', kind: 'text' },
+  { key: 'seedConcepts', label: 'Seed concepts (comma-separated search queries)', kind: 'text' },
+  { key: 'seedChannels', label: 'Seed channels (comma-separated @handles or channel urls)', kind: 'text' },
+  { key: 'seedPlaylists', label: 'Seed playlists (comma-separated playlist ids or urls)', kind: 'text' },
   { key: 'positiveTopicConstraints', label: 'Positive topic constraints (comma-separated)', kind: 'text' },
   { key: 'negativeTopicConstraints', label: 'Negative topic constraints (comma-separated)', kind: 'text' },
   { key: 'sourceConstraints', label: 'Source constraints (comma-separated source ids)', kind: 'text' },
@@ -245,7 +247,7 @@ const CONFIG_FIELDS: Array<{
 ];
 
 type ConfigFieldKey =
-  | 'seedTopics' | 'seedConcepts'
+  | 'seedTopics' | 'seedConcepts' | 'seedChannels' | 'seedPlaylists'
   | 'positiveTopicConstraints' | 'negativeTopicConstraints'
   | 'sourceConstraints' | 'sourceTypePreferences'
   | 'unfamiliarityTarget' | 'narrativeDiversityTarget' | 'temporal'
@@ -331,8 +333,16 @@ function applyFieldValue(config: ViewpointConfig, key: ConfigFieldKey, raw: stri
     target['locale'] = locale;
     return;
   }
+  if (key === 'temporalFrom' || key === 'temporalTo') {
+    // An empty input clears the window. Any other value is stored verbatim;
+    // the interpret layer treats unparseable values as no window (never as a
+    // filter that silently drops every candidate).
+    target[key] = trimmed === '' ? undefined : trimmed;
+    return;
+  }
   if (
     key === 'seedTopics' || key === 'seedConcepts' ||
+    key === 'seedChannels' || key === 'seedPlaylists' ||
     key === 'positiveTopicConstraints' || key === 'negativeTopicConstraints' ||
     key === 'sourceConstraints' || key === 'sourceTypePreferences' ||
     key === 'channelSizePreferences'

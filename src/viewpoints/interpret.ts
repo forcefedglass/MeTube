@@ -19,6 +19,7 @@ import type {
 import type { ViewpointConfig, WeightOverride } from '../model/viewpoint';
 import type { RankWeights } from '../ranking/components';
 import { DEFAULT_WEIGHTS } from '../ranking/components';
+import { isUnknownDate } from '../model/discovery';
 
 /** Hard constraints applied before ranking. */
 export interface ViewpointFilters {
@@ -56,12 +57,16 @@ export interface ViewpointInterpretation {
 
 /** Deterministic: interpret a config into engine parameters. */
 export function interpretViewpoint(config: ViewpointConfig): ViewpointInterpretation {
+  // Unparseable date strings mean no window. They never become NaN bounds
+  // that silently drop every candidate with an unknown publication date.
+  const from = config.temporalFrom !== undefined ? Date.parse(config.temporalFrom) : undefined;
+  const to = config.temporalTo !== undefined ? Date.parse(config.temporalTo) : undefined;
   const filters: ViewpointFilters = {
     positiveTopics: new Set(config.positiveTopicConstraints),
     negativeTopics: new Set(config.negativeTopicConstraints),
     sources: new Set(config.sourceConstraints),
-    from: config.temporalFrom !== undefined ? Date.parse(config.temporalFrom) : undefined,
-    to: config.temporalTo !== undefined ? Date.parse(config.temporalTo) : undefined,
+    from: from !== undefined && Number.isNaN(from) ? undefined : from,
+    to: to !== undefined && Number.isNaN(to) ? undefined : to,
   };
   const limits: ViewpointAssemblyLimits = {
     repetitionLimit: Math.max(1, Math.trunc(config.repetitionLimit)),
@@ -115,10 +120,19 @@ export function candidatePasses(
   ) {
     return false;
   }
+  // Date-window filter. Candidates with unknown publication dates
+  // (UNKNOWN_DATE sentinel, from sources that only give relative dates like
+  // "2 years ago") pass when no window is set. When a window IS set, they
+  // are dropped: the source never said when they appeared, so they cannot
+  // be verified against the window — and fabricating a date is never an
+  // option.
   const published = Date.parse(candidate.publishedAt);
-  if (Number.isNaN(published)) return false;
-  if (filters.from !== undefined && !Number.isNaN(filters.from) && published < filters.from) return false;
-  if (filters.to !== undefined && !Number.isNaN(filters.to) && published > filters.to) return false;
+  if (isUnknownDate(candidate.publishedAt) || Number.isNaN(published)) {
+    if (filters.from !== undefined || filters.to !== undefined) return false;
+  } else {
+    if (filters.from !== undefined && !Number.isNaN(filters.from) && published < filters.from) return false;
+    if (filters.to !== undefined && !Number.isNaN(filters.to) && published > filters.to) return false;
+  }
   return true;
 }
 

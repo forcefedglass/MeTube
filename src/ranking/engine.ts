@@ -6,6 +6,7 @@ import type {
   UserProfile,
 } from '../model/types';
 import { RANK_COMPONENT_LABELS } from '../model/types';
+import { isUnknownDate } from '../model/discovery';
 import {
   RANK_COMPONENT_ORDER,
   scoreRelevance,
@@ -98,7 +99,9 @@ function explainComponent(candidate: CandidateVideo, name: RankComponentName, va
     case 'narrativeNovelty':
       return value > 0 ? 'Narrative cluster new to you.' : 'Narrative cluster already seen.';
     case 'temporalDiversity':
-      return `Published ${candidate.publishedAt.slice(0, 10)}; temporal distance from pool mean scored.`;
+      return isUnknownDate(candidate.publishedAt)
+        ? 'Publication date unknown (source gave no absolute date); temporal component not scored.'
+        : `Published ${candidate.publishedAt.slice(0, 10)}; temporal distance from pool mean scored.`;
     case 'controlledExploration':
       return 'Constant exploration allowance: every candidate receives this.';
     case 'repetition':

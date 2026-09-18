@@ -8,7 +8,7 @@
  */
 
 import type { Viewpoint, Viewlist } from '../model/viewpoint';
-import { duplicateViewpoint } from '../model/viewpoint';
+import { duplicateViewpoint, defaultViewpointConfig } from '../model/viewpoint';
 import type { LocalStore } from '../storage/local-store';
 
 export const VIEWPOINTS_KEY = 'viewpoints';
@@ -45,7 +45,16 @@ class StoreViewpointRepository implements ViewpointRepository {
 
   private async readAll(): Promise<Viewpoint[]> {
     const raw = await this.store.getKv(VIEWPOINTS_KEY);
-    return Array.isArray(raw) ? (raw as Viewpoint[]) : [];
+    const all = Array.isArray(raw) ? (raw as Viewpoint[]) : [];
+    // Phase 2 additive fields: viewpoints stored before they existed lack
+    // them. Defaults are filled on read (never silently persisted).
+    return all.map((vp) => ({
+      ...vp,
+      config: {
+        ...defaultViewpointConfig(),
+        ...vp.config,
+      },
+    }));
   }
 
   private async writeAll(vps: Viewpoint[]): Promise<void> {

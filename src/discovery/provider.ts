@@ -1,18 +1,19 @@
 /**
  * Candidate acquisition — the front door of MeTube's discovery pipeline.
  *
- * A CandidateProvider surfaces CandidateVideos from independent sources.
- * Bootstrap fidelity: one provider, backed by local fixtures, zero network.
- * Future providers (editorial lists, community lists, citation-following,
- * random walks) implement this same interface — nothing downstream needs
- * to know where candidates came from.
+ * A CandidateProvider surfaces candidates from independent sources. Phase 2
+ * extends the request shape: providers can be driven by an acquisition plan
+ * (seed searches, channel uploads, explicit videos, playlists) derived from
+ * a Viewpoint. Providers still never consume YouTube's own recommendations
+ * and still never score anything.
  */
 
 import type { CandidateVideo } from '../model/types';
 import type { ChannelId, TopicId } from '../model/types';
+import type { AcquisitionStep } from '../model/discovery';
 
 export interface CandidateProvider {
-  /** Stable provider id, e.g. "fixture-local". */
+  /** Stable provider id, e.g. "fixture-local", "youtube-web". */
   readonly id: string;
   /** Human-readable label. */
   readonly label: string;
@@ -26,6 +27,13 @@ export interface CandidateProvider {
 export interface CandidateRequest {
   /** Maximum number of candidates to return. */
   limit: number;
+  /**
+   * Optional acquisition steps (Phase 2). When provided, the provider
+   * fetches from those surfaces only. When absent, providers return their
+   * standing pool (fixtures: the local pool; real providers: previously
+   * discovered material is supplied by the pool layer, not refetched).
+   */
+  steps?: AcquisitionStep[];
 }
 
 /**

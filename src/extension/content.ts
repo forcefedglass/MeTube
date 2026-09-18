@@ -10,7 +10,17 @@
 import { emptyUserProfile } from '../model/types';
 import type { FeedbackKind, UserFeedback, UserProfile } from '../model/types';
 import { FixtureCandidateProvider } from '../discovery/fixture-provider';
+import { YouTubeWebProvider } from '../discovery/youtube-web';
+import type { HtmlFetch } from '../discovery/youtube-web';
 import { assembleFeed } from '../discovery/assemble-feed';
+import {
+  acquireForViewpoint,
+  loadPool,
+  FIXTURE_MODE_KEY,
+} from '../discovery/pool';
+import type { PoolState } from '../discovery/pool';
+import { toCandidateVideo } from '../discovery/pool';
+import { assembleViewstream } from '../viewpoints/viewstream';
 import { openLocalStore } from '../storage/local-store';
 import type { LocalStore } from '../storage/local-store';
 import { insertNavEntry, ensureMount } from '../youtube/nav';
@@ -18,12 +28,36 @@ import { renderFeedCard } from '../ui/feed-card';
 import { FEED_STYLES } from '../ui/styles';
 import { openViewpointRepository, VIEWPOINT_SEEDED_KEY } from '../viewpoints/repository';
 import { seedDemoViewpoints } from '../viewpoints/demo';
-import { generateViewstream } from '../viewpoints/viewstream';
 import { summarizeViewpoint } from '../model/viewpoint';
 import { renderViewpointManager } from '../ui/viewpoint-manager';
+import { renderPoolInspector } from '../ui/pool-inspector';
+import { FIXTURE_TOPICS } from '../discovery/fixtures';
 
 const store: LocalStore = openLocalStore();
-const provider = new FixtureCandidateProvider();
+
+/**
+ * Provider selection: real acquisition by default; fixtures behind an
+ * explicit dev/test mode (KV flag `use-fixture-provider`).
+ */
+async function resolveProvider(): Promise<import('../discovery/provider').CandidateProvider> {
+  const fixtureMode = await store.getKv(FIXTURE_MODE_KEY);
+  if (fixtureMode === true) {
+    return new FixtureCandidateProvider();
+  }
+  const fetchHtml: HtmlFetch = (url) => fetch(url, { credentials: 'omit' });
+  return new YouTubeWebProvider(fetchHtml);
+}
+
+/**
+ * Topic labels resolve through the fixture catalog; unresolvable ids yield
+ * no search step (never a guessed query).
+ */
+function makeTopicLabelResolver(): import('../model/discovery').TopicLabelResolver {
+  const labels = new Map<string, string>(
+    FIXTURE_TOPICS.map((t) => [t.id, t.label] as const),
+  );
+  return (topicId) => labels.get(topicId) ?? null;
+}
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -74,12 +108,25 @@ async function showFeed(): Promise<void> {
   await ensureSeeded();
   const repo = openViewpointRepository(store);
   const active = await repo.getActive();
+  const provider = await resolveProvider();
 
   let snapshot: import('../model/types').FeedSnapshot;
   if (active) {
-    // Viewstream: feed assembled through the active Viewpoint.
+    // Viewstream: acquire (or serve from pool cache), then assemble through
+    // the active Viewpoint.
     const profile = await loadProfile();
-    snapshot = await generateViewstream(provider, { viewpoint: active, limit: 8, profile }, nowIso());
+    const pool = await loadPool(store);
+    const { state: nextPool } = await acquireForViewpoint(store, provider as YouTubeWebProvider, pool, {
+      viewpointId: active.id,
+      seedTopics: active.config.seedTopics,
+      seedConcepts: active.config.seedConcepts,
+      explicitChannels: active.config.seedChannels,
+      seedPlaylists: active.config.seedPlaylists,
+      resolveTopicLabel: makeTopicLabelResolver(),
+      now: nowIso(),
+    });
+    const candidates = nextPool.entries.map(toCandidateVideo);
+    snapshot = await assembleViewstream(candidates, { viewpoint: active, limit: 8, profile }, nowIso());
     const banner = document.createElement('p');
     banner.className = 'metube-viewpoint-banner';
     banner.textContent = `Active Viewpoint: ${active.title} — this Viewstream was generated through it.`;
@@ -159,6 +206,34 @@ async function showManager(): Promise<void> {
       onRefreshFeed: () => void showManager(),
     }),
   );
+
+  // Pool inspector: acquisition is observable, always.
+  const pool = await loadPool(store);
+  mount.append(
+    renderPoolInspector(pool, nowIso(), () => {
+      void refreshAcquisition().then(() => showManager());
+    }),
+  );
+}
+
+/** Re-run acquisition for the active Viewpoint, bypassing the TTL cache. */
+async function refreshAcquisition(): Promise<void> {
+  const repo = openViewpointRepository(store);
+  const active = await repo.getActive();
+  if (!active) return;
+  const provider = await resolveProvider();
+  if (!(provider instanceof YouTubeWebProvider)) return;
+  const pool = await loadPool(store);
+  await acquireForViewpoint(store, provider, pool, {
+    viewpointId: active.id,
+    seedTopics: active.config.seedTopics,
+    seedConcepts: active.config.seedConcepts,
+    explicitChannels: active.config.seedChannels,
+    seedPlaylists: active.config.seedPlaylists,
+    resolveTopicLabel: makeTopicLabelResolver(),
+    now: nowIso(),
+    force: true,
+  });
 }
 
 function hideFeed(): void {

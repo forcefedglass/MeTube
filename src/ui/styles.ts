@@ -92,4 +92,21 @@ export const FEED_STYLES = `
   border-radius: 16px; padding: 4px 10px; font-size: 12px; cursor: pointer;
 }
 #metube-mount > button:hover { background: #3a4048; }
+.metube-pool-inspector {
+  background: #1c1f24; border: 1px solid #2a2f36; border-radius: 12px;
+  padding: 12px; margin: 12px 0; display: grid; gap: 4px;
+}
+.metube-pool-inspector h3 { margin: 0 0 4px; font-size: 14px; }
+.metube-pool-inspector h4 { margin: 8px 0 2px; font-size: 13px; color: #9aa0a6; }
+.metube-pool-facts { list-style: none; margin: 0; padding: 0; font-size: 12px; color: #e8eaed; }
+.metube-pool-facts li { padding: 2px 0; }
+.metube-pool-facts strong { color: #8ab4f8; font-weight: 600; }
+.metube-pool-failures li { color: #f28b82; }
+.metube-pool-note { color: #9aa0a6; font-size: 12px; margin: 2px 0; }
+.metube-pool-inspector > button {
+  background: #2a2f36; color: #e8eaed; border: 1px solid #3a4048;
+  border-radius: 16px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+  justify-self: start; margin-top: 8px;
+}
+.metube-pool-inspector > button:hover { background: #3a4048; }
 `;
