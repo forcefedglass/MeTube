@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "MeTube",
+  "version": "0.1.0",
+  "description": "An independent discovery and recommendation layer for YouTube. Local-first, explicit-feedback-only, no backend.",
+  "permissions": [],
+  "host_permissions": [],
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

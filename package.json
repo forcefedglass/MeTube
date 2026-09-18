@@ -1,0 +1,23 @@
+{
+  "name": "metube",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MeTube — an independent discovery and recommendation layer for YouTube. Local-first browser extension. Not affiliated with YouTube or Google.",
+  "license": "MIT",
+  "type": "commonjs",
+  "scripts": {
+    "build": "node scripts/build-extension.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "tsc -p tsconfig.test.json && node --test \"dist-test/tests/*.test.js\"",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true}); require('fs').rmSync('dist-test',{recursive:true,force:true});\""
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "@types/node": "^20.14.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.5.4"
+  }
+}
