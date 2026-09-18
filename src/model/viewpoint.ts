@@ -1,0 +1,243 @@
+/**
+ * Viewpoint domain model — PROVISIONAL.
+ *
+ * A Viewpoint is a user-controlled discovery/ranking lens. Activating one
+ * generates a Viewstream (a feed produced through that lens).
+ *
+ * Design rules (FROZEN for Phase 1):
+ *   - A Viewpoint is NOT a search query and NOT necessarily political.
+ *   - It is completely inspectable and editable. Every field that can shape
+ *     a feed is visible and changeable by the user.
+ *   - No political ideology inference. For political Viewpoints, any
+ *     statement about the user's own political baseline must be text the
+ *     user wrote themselves (`baselineContext`). Nothing is inferred from
+ *     clicks or watch history.
+ *   - Interpretation of a Viewpoint's constraints is deterministic and
+ *     testable (see src/viewpoints/interpret.ts).
+ */
+
+import type {
+  ChannelId,
+  ChannelScaleBand,
+  DiscoverySourceId,
+  FeedbackKind,
+  Iso8601,
+  NarrativeClusterId,
+  TopicId,
+  ViewpointId,
+} from './types';
+
+/** What familiarity target the Viewpoint asks for. */
+export type UnfamiliarityTarget =
+  | 'any'
+  | 'mostly-unfamiliar'
+  | 'strictly-unfamiliar';
+
+/** How hard the Viewpoint pushes for narrative spread. */
+export type NarrativeDiversityTarget =
+  | 'any'
+  | 'mixed-narratives'
+  | 'max-narrative-spread';
+
+/** How the Viewpoint samples publication dates. */
+export type TemporalSampling =
+  | 'any'
+  | 'recent'
+  | 'historical'
+  | 'wide-window';
+
+export type SourceTypePreference =
+  | DiscoverySourceId
+  | 'editorial'
+  | 'community'
+  | 'citation-follow'
+  | 'search'
+  | 'random-walk'
+  | 'fixture';
+
+/** A single explicit weighting override. */
+export interface WeightOverride {
+  component: 'relevance'
+    | 'sourceNovelty'
+    | 'topicNovelty'
+    | 'narrativeNovelty'
+    | 'temporalDiversity'
+    | 'controlledExploration'
+    | 'repetition'
+    | 'sourceConcentration';
+  value: number;
+}
+
+/**
+ * Language/region preference. Both fields optional: unknown means "no
+ * constraint". Never used to infer anything about the user.
+ */
+export interface LocalePreference {
+  /** ISO 639-1 language code when known, e.g. "ja". */
+  language?: string;
+  /** ISO 3166-1 region code when known, e.g. "JP". */
+  region?: string;
+}
+
+/**
+ * The inspectable configuration of a Viewpoint. Every field is optional
+ * except title and enabled; omitted constraints mean "no constraint".
+ */
+export interface ViewpointConfig {
+  /** Seed topics — the entry points into the discovery graph. */
+  seedTopics: TopicId[];
+  /** Free-text seed concepts for future search-based acquisition. */
+  seedConcepts: string[];
+  /** Candidate must touch at least one of these topics (OR). */
+  positiveTopicConstraints: TopicId[];
+  /** Candidate must touch none of these topics (NOT). */
+  negativeTopicConstraints: TopicId[];
+  /** Candidate must have been surfaced by at least one of these sources. */
+  sourceConstraints: DiscoverySourceId[];
+  /** Prefer these source kinds; soft preference, not a hard filter. */
+  sourceTypePreferences: SourceTypePreference[];
+  /** Minimum familiarity requirement (hard-ish guide for ranking). */
+  unfamiliarityTarget: UnfamiliarityTarget;
+  /** Narrative spread request (guide for ranking). */
+  narrativeDiversityTarget: NarrativeDiversityTarget;
+  /** Temporal range/sampling request. */
+  temporal: TemporalSampling;
+  temporalFrom?: Iso8601;
+  temporalTo?: Iso8601;
+  /** Preferred channel size bands (soft). */
+  channelSizePreferences: ChannelScaleBand[];
+  /** Geographic/language preferences when known (soft). */
+  locale: LocalePreference;
+  /** Fraction [0,1] of feed budget for exploration (soft). */
+  explorationPercent: number;
+  /** Max items from one source in the final feed (hard). */
+  repetitionLimit: number;
+  /** Max share of feed [0,1] one channel may occupy (hard). */
+  sourceConcentrationLimit: number;
+  /** Explicit per-component weighting overrides. */
+  weightOverrides: WeightOverride[];
+  /** User-written baseline/context, shown and editable verbatim. */
+  baselineContext: string;
+}
+
+export interface Viewpoint {
+  id: ViewpointId;
+  title: string;
+  description: string;
+  config: ViewpointConfig;
+  /** true when selectable/generatable. Disabled Viewpoints never generate. */
+  enabled: boolean;
+  createdAt: Iso8601;
+  updatedAt: Iso8601;
+}
+
+/**
+ * A Viewlist: named collection of Viewpoints. Membership is by id, so
+ * deleting a Viewpoint just removes it from lists on resolve.
+ */
+export interface Viewlist {
+  id: string;
+  title: string;
+  description: string;
+  viewpointIds: ViewpointId[];
+  createdAt: Iso8601;
+  updatedAt: Iso8601;
+}
+
+export function defaultViewpointConfig(): ViewpointConfig {
+  return {
+    seedTopics: [],
+    seedConcepts: [],
+    positiveTopicConstraints: [],
+    negativeTopicConstraints: [],
+    sourceConstraints: [],
+    sourceTypePreferences: [],
+    unfamiliarityTarget: 'any',
+    narrativeDiversityTarget: 'any',
+    temporal: 'any',
+    temporalFrom: undefined,
+    temporalTo: undefined,
+    channelSizePreferences: [],
+    locale: {},
+    explorationPercent: 0.15,
+    repetitionLimit: 1,
+    sourceConcentrationLimit: 0.5,
+    weightOverrides: [],
+    baselineContext: '',
+  };
+}
+
+/** Create a new Viewpoint with defaults. */
+export function newViewpoint(
+  id: ViewpointId,
+  title: string,
+  description: string,
+  now: Iso8601,
+  partial?: Partial<ViewpointConfig>,
+): Viewpoint {
+  return {
+    id,
+    title,
+    description,
+    config: { ...defaultViewpointConfig(), ...partial },
+    enabled: true,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+/**
+ * Duplicate a Viewpoint under a new id. Copies the config and all fields;
+ * the caller supplies the new title/id and timestamp.
+ */
+export function duplicateViewpoint(
+  source: Viewpoint,
+  id: ViewpointId,
+  title: string,
+  now: Iso8601,
+): Viewpoint {
+  return {
+    ...source,
+    id,
+    title,
+    config: structuredCloneConfig(source.config),
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+/**
+ * Serialize a ViewpointConfig deterministically — used to test that
+ * interpretation is a pure function of configuration.
+ */
+export function structuredCloneConfig(config: ViewpointConfig): ViewpointConfig {
+  return JSON.parse(JSON.stringify(config)) as ViewpointConfig;
+}
+
+/**
+ * One-line summary of what a Viewpoint asks for, shown on the feed.
+ * Deliberately plain: it restates constraints, it does not editorialize.
+ */
+export function summarizeViewpoint(vp: Viewpoint): string {
+  const parts: string[] = [];
+  if (vp.config.positiveTopicConstraints.length > 0) {
+    parts.push(`topics: ${vp.config.positiveTopicConstraints.join(' | ')}`);
+  }
+  if (vp.config.negativeTopicConstraints.length > 0) {
+    parts.push(`excluding: ${vp.config.negativeTopicConstraints.join(' | ')}`);
+  }
+  if (vp.config.unfamiliarityTarget !== 'any') {
+    parts.push(vp.config.unfamiliarityTarget);
+  }
+  if (vp.config.narrativeDiversityTarget !== 'any') {
+    parts.push(vp.config.narrativeDiversityTarget);
+  }
+  if (vp.config.temporal !== 'any') {
+    parts.push(vp.config.temporal);
+  }
+  if (vp.config.channelSizePreferences.length > 0) {
+    parts.push(`channel size: ${vp.config.channelSizePreferences.join(' | ')}`);
+  }
+  if (parts.length === 0) return 'no constraints';
+  return parts.join(' · ');
+}

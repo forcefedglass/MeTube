@@ -39,6 +39,11 @@ YouTube's recommendation output never enters the pipeline at any stage.
 | `src/discovery/fixtures/*` | Synthetic fixture pool (topics, channels, narratives, sources, candidates). | model |
 | `src/discovery/fixture-provider.ts` | Bootstrap provider serving fixtures. | discovery |
 | `src/discovery/assemble-feed.ts` | Feed assembly: fetch, mute, rank, snapshot. | discovery, ranking |
+| `src/model/viewpoint.ts` | Viewpoint/Viewlist domain model (PROVISIONAL). Zero project deps beyond `model/types`. | model |
+| `src/viewpoints/interpret.ts` | Pure deterministic Viewpoint-config → filters/weights/limits interpretation. | model, ranking |
+| `src/viewpoints/viewstream.ts` | Viewstream generation: filter, mute, rank, limits, snapshot. | viewpoints, discovery, ranking |
+| `src/viewpoints/repository.ts` | Viewpoint/Viewlist CRUD, duplication, activation over LocalStore. | viewpoints, model, storage |
+| `src/viewpoints/demo.ts` | DEMO Viewpoints over fixtures; idempotent seeding. | viewpoints, model |
 | `src/ranking/components/*` | One pure function per named score component. | model |
 | `src/ranking/engine.ts` | `rankCandidates`: components → weights → reason. | ranking, model |
 | `src/storage/local-store.ts` | IndexedDB wrapper + in-memory fallback. | — |
@@ -46,6 +51,7 @@ YouTube's recommendation output never enters the pipeline at any stage.
 | `src/youtube/playback.ts` | Pure playback decisions + isolation constants. | — |
 | `src/youtube/player-frame.ts` | DOM construction of the isolated player. | youtube |
 | `src/ui/feed-card.ts` | Card rendering: reason, components, feedback. | model, ranking, youtube |
+| `src/ui/viewpoint-manager.ts` | Viewpoint/Viewlist management UI (plain DOM). | model, viewpoints |
 | `src/ui/styles.ts` | Scoped styles for the feed overlay. | — |
 | `src/extension/content.ts` | Content-script orchestration entry. | everything |
 

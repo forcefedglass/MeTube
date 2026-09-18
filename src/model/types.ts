@@ -16,6 +16,17 @@ export type TopicId = string;
 export type NarrativeClusterId = string;
 export type DiscoverySourceId = string;
 export type FeedbackId = string;
+/** Viewpoint id. Stable per Viewpoint; demo ids are prefixed `vp-demo-`. */
+export type ViewpointId = string;
+
+/**
+ * Reference to the Viewpoint that generated a feed. Embedded in snapshots so
+ * any feed can always answer "which lens produced this?"
+ */
+export interface ViewpointRef {
+  id: ViewpointId;
+  title: string;
+}
 
 /** ISO-8601 timestamp string, e.g. "2025-11-02T14:00:00Z". */
 export type Iso8601 = string;
@@ -166,4 +177,9 @@ export interface FeedSnapshot {
   consideredCount: number;
   /** Number of candidates dropped because their channel is muted. */
   mutedCount: number;
+  /**
+   * The Viewpoint that generated this snapshot, when one was active.
+   * Feeds assembled without a Viewpoint record `null` (bootstrap path).
+   */
+  viewpoint: ViewpointRef | null;
 }

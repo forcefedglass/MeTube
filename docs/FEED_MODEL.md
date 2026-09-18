@@ -11,6 +11,35 @@ view and persisted as an immutable `FeedSnapshot`. Assembly:
 4. Take the top slice (target size: 8 at bootstrap).
 5. Persist the snapshot; the snapshot is the audit record.
 
+Every snapshot records `viewpoint: {id, title} | null` — which Viewpoint
+generated it, or that it is unlensed.
+
+## Viewstreams (Phase 1)
+
+A **Viewstream** is a feed assembled through an active Viewpoint. The
+lens applies before ranking:
+
+1. **Hard filters** (deterministic, `src/viewpoints/interpret.ts`):
+   positive topic constraints (OR), negative topic constraints (NOT),
+   discovery source constraints, temporal window, and — for
+   `strictly-unfamiliar` targets — explicit-feedback familiarity.
+2. **Channel muting** — unchanged: exclusion, not down-ranking.
+3. **Ranking with the Viewpoint's derived weights** — `weightOverrides`
+   replace per-component defaults; everything else is the same engine.
+4. **Post-selection limits** (deterministic, greedy in rank order):
+   `repetitionLimit` caps items per channel; `sourceConcentrationLimit`
+   caps one channel's share of the feed.
+5. **Snapshot** embeds the Viewpoint ref. The feed header names the Active
+   Viewpoint and restates its constraints.
+
+Interpretation is pure: same config + candidates + profile → same result.
+`explorationPercent`, `unfamiliarityTarget`, `narrativeDiversityTarget`,
+`temporal` (mode), `channelSizePreferences`, `locale`, `sourceTypePreferences`,
+`seedTopics`, and `seedConcepts` are recorded and inspectable but do not yet
+change assembly at Phase 1 fidelity — they bind to real acquisition and
+ranking signals in later phases. The feed says what it did; nothing is
+inferred.
+
 ## The ranking engine
 
 Additive and explainable. Every candidate's score is:

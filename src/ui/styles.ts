@@ -55,4 +55,41 @@ export const FEED_STYLES = `
   border-radius: 16px; padding: 4px 10px; font-size: 12px; cursor: pointer;
 }
 .metube-card-feedback button:hover { background: #3a4048; }
+.metube-viewpoint-banner {
+  color: #8ab4f8;
+  font-size: 14px;
+  margin: 8px 0 2px;
+}
+.metube-viewpoint-summary {
+  color: #9aa0a6;
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+.metube-vp-manager { max-width: 680px; margin: 0 auto; }
+.metube-vp-manager h3 { margin: 16px 0 8px; }
+.metube-vp-active-line { color: #8ab4f8; font-size: 14px; }
+.metube-vp-list { list-style: none; padding: 0; display: grid; gap: 12px; }
+.metube-vp-row {
+  background: #1c1f24; border: 1px solid #2a2f36; border-radius: 12px; padding: 12px;
+}
+.metube-vp-title { font-weight: 600; font-size: 15px; }
+.metube-vp-summary { color: #9aa0a6; font-size: 13px; margin: 4px 0; }
+.metube-vp-desc { color: #9aa0a6; font-size: 12px; margin: 2px 0 8px; }
+.metube-vp-controls { display: flex; flex-wrap: wrap; gap: 6px; }
+.metube-vp-controls button, .metube-vp-manager > button, .metube-vp-viewlists button {
+  background: #2a2f36; color: #e8eaed; border: 1px solid #3a4048;
+  border-radius: 16px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+}
+.metube-vp-controls button:hover { background: #3a4048; }
+.metube-vp-viewlist {
+  background: #1c1f24; border: 1px solid #2a2f36; border-radius: 12px;
+  padding: 12px; margin: 8px 0; display: grid; gap: 4px;
+}
+.metube-vp-viewlist-title { font-weight: 600; }
+.metube-vp-viewlist label { font-size: 13px; display: block; }
+#metube-mount > button {
+  background: #2a2f36; color: #e8eaed; border: 1px solid #3a4048;
+  border-radius: 16px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+}
+#metube-mount > button:hover { background: #3a4048; }
 `;

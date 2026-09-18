@@ -40,5 +40,6 @@ export async function assembleFeed(
     feed,
     consideredCount: unmuted.length,
     mutedCount,
+    viewpoint: null,
   };
 }

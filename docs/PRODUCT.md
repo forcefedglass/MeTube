@@ -47,6 +47,25 @@ the profile that their everyday viewing depends on.
    guess.
 7. **Play in isolation** (see `PRIVACY_AND_ISOLATION.md`).
 
+## Viewpoints (Phase 1)
+
+A **Viewpoint** is a user-controlled discovery/ranking lens. Activating one
+generates a **Viewstream** — a feed assembled through that lens. A
+**Viewlist** is a named collection of Viewpoints.
+
+- A Viewpoint is not a search query and is not necessarily political. It can
+  be "Small PC Gaming Channels", "Historical Coverage Before Release",
+  "Technical Analysis Only", or a deliberate counter-viewpoint lens.
+- Viewpoints are completely inspectable and editable. Every constraint that
+  shapes a Viewstream is visible and changeable.
+- **No political ideology inference.** For political Viewpoints, the user's
+  own political baseline is explicitly supplied and editable by the user
+  (`baselineContext`) — never inferred from clicks or watch history.
+- The feed always names the Active Viewpoint that generated it, or states
+  plainly that it is unlensed.
+- DEMO Viewpoints over the local fixtures ship enabled so the mechanism is
+  observable without real acquisition.
+
 ## Diversity goals (ranked priorities)
 
 The feed should be diverse along these axes, in rough priority order:

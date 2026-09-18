@@ -78,7 +78,11 @@ class IdbLocalStore implements LocalStore {
 
   async getKv(key: string): Promise<unknown> {
     const os = await this.tx(STORE_KV, 'readonly');
-    return wrap(os.get(key));
+    const record = (await wrap(os.get(key))) as { key: string; value: unknown } | undefined;
+    // Records are stored as {key, value}; return the payload, not the wrapper.
+    // (Bootstrap bug: the wrapper leaked out, so reads after writes returned
+    // the wrong shape. Caught by Phase 1 Viewpoint seeding in a real browser.)
+    return record === undefined ? undefined : record.value;
   }
 
   async putKv(key: string, value: unknown): Promise<void> {
@@ -87,7 +91,7 @@ class IdbLocalStore implements LocalStore {
   }
 }
 
-class MemoryLocalStore implements LocalStore {
+export class MemoryLocalStore implements LocalStore {
   private profile: unknown = null;
   private feeds: unknown[] = [];
   private kv = new Map<string, unknown>();
