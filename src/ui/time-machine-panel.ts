@@ -17,6 +17,7 @@ import type {
 } from '../viewpoints/timemachine';
 import { TIME_PERIOD_LABELS } from '../viewpoints/timemachine';
 import type { TimeMachineConfig } from '../model/viewpoint';
+import { renderHelpToggle } from './help-tooltips';
 
 export interface TimeMachineCallbacks {
   /** Persist edited config (called on every field change). */
@@ -33,6 +34,7 @@ export function renderTimeMachinePanel(
   wrap.className = 'metube-timemachine';
   const h = document.createElement('h3');
   h.textContent = 'Time Machine';
+  h.append(renderHelpToggle('time-machine'));
   wrap.append(h);
 
   if (!hasActiveViewpoint) {

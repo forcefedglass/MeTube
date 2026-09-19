@@ -26,12 +26,13 @@ what I haven't seen.*
 
 ## Status
 
-v0.6.0 (Phase 5, daily-use product). The full product surface runs on both
-Firefox and Chromium: Viewpoint-driven discovery, exposure-budget
-composition, feed autopsy, Time Machine, provenance chains, portability,
-and a tabbed shell. See `METUBE_CRYSTALLIZATION.md` for the current-state
-record, `METUBE_CHANGELOG.md` for history, `METUBE_CONTEXT.md` for durable
-state.
+v0.7.0 (Phase 6, guided first-use onboarding). Everything from Phase 5 plus
+a three-path first-run gate, a 15-step guided tour that teaches through use
+with live runtime values, an opt-in demo mechanism (including explicitly
+disclaimed political-perspective test lenses), contextual (?) help on every
+tab and panel, and a simplified Viewpoint creator. See
+`METUBE_CRYSTALLIZATION.md` for the current-state record,
+`METUBE_CHANGELOG.md` for history, `METUBE_CONTEXT.md` for durable state.
 
 ## What it does
 
@@ -61,6 +62,14 @@ state.
   `youtube-nocookie.com` embed with cookies blocked and referrers
   suppressed. Session isolation, not anonymity (loading a video still
   contacts YouTube).
+- **Guided first-use tour** — a three-path first run: watch a 15-step
+  guided tour that teaches each mechanism through use (real provenance
+  chains, real autopsy numbers, a real config change with UNDO), start
+  with five generic starter Viewpoints, or start empty. The tour is
+  skippable, resumable, and replayable from Help. Political-perspective
+  demos exist only behind an explicit opt-in with a disclaimer; they are
+  sampling lenses, not user profiling, and using one does not define
+  anyone's political identity.
 
 Slipgate does **not** attempt to determine what you should believe, does
 not promise objective truth, does not define one canonical "other side",
@@ -86,8 +95,10 @@ Firefox release builds require a one-time preference change to install it:
 4. Navigate to youtube.com. A "Slipgate" entry appears in the guide (plus
    a floating toggle if the guide is absent). Click it to open Slipgate.
 
-First run shows the onboarding gate: accept five generic, fully editable
-starter Viewpoints, or start empty and author your own.
+First run shows the onboarding gate with three paths: "Show me how it
+works" (the guided tour), "Start with starter Viewpoints" (five generic,
+fully editable starters), or "Start empty — I will author my own".
+Onboarding shows once; the tour can be replayed any time from Help.
 
 ## Install (Chromium, development)
 
@@ -104,7 +115,7 @@ guide.
 
 ```sh
 npm run typecheck        # tsc --noEmit
-npm test                 # compile + node --test (160 tests)
+npm test                 # compile + node --test (201 tests)
 npm run build            # extension into dist/ (Chromium)
 npm run build:firefox    # extension into dist-firefox/
 npm run package:firefox  # metube-firefox.xpi
@@ -132,6 +143,13 @@ never the default user experience.
   real video contacts YouTube servers.
 - **Feedback is explicit only**: no behavioral inference, no watch-history
   import, no political classification of any kind.
+- **Demo Viewpoints are test lenses, not truth labels**: the
+  political-perspective demos are sampling lenses over material associated
+  with different US political traditions; using one does not define your
+  political identity, and no Viewpoint is scored as more balanced or
+  accurate than another. Tour state is stored separately from Viewpoint
+  data (its own IndexedDB key), so tour progress never touches preference
+  data.
 
 ## Layout
 
@@ -140,12 +158,13 @@ src/
   model/        domain types (viewpoint, exposure, feedback, classification)
   viewpoints/   starters, composer, timemachine, autopsy, provenance,
                 portability, repository, interpretation, firewall, pairing
+  onboarding/   guided-tour state machine, opt-in demo mechanism
   discovery/    plan-driven acquisition, yt parsers, candidate pool, coverage
   classification/ evidence-based classifier, overrides, enrichment
   ranking/      named scoring components + engine
   storage/      IndexedDB wrapper with in-memory fallback
   youtube/      nav injection, playback boundary
-  ui/           shell, panels, cards, styles
+  ui/           shell, panels, cards, tour overlay, help tooltips, styles
   extension/    content-script entry point, manifest.json
 tests/          pure-logic tests (node:test)
 docs/           product + architecture documents

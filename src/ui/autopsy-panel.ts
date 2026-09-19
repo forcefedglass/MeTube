@@ -8,12 +8,14 @@
  */
 
 import type { FeedAutopsy } from '../viewpoints/autopsy';
+import { renderHelpToggle } from './help-tooltips';
 
 export function renderAutopsyPanel(autopsy: FeedAutopsy): HTMLElement {
   const wrap = document.createElement('section');
   wrap.className = 'metube-autopsy';
   const h = document.createElement('h3');
   h.textContent = 'Feed autopsy';
+  h.append(renderHelpToggle('autopsy'));
   wrap.append(h);
   const summary = document.createElement('p');
   summary.className = 'metube-autopsy-summary';

@@ -10,6 +10,7 @@
  */
 
 import type { ExposureReport } from '../model/exposure';
+import { renderHelpToggle } from './help-tooltips';
 
 export function renderExposurePanel(
   report: ExposureReport | null,
@@ -20,6 +21,7 @@ export function renderExposurePanel(
 
   const heading = document.createElement('h3');
   heading.textContent = 'Why this Viewstream looks like this';
+  heading.append(renderHelpToggle('exposure-budget'));
   section.append(heading);
 
   if (!report) {

@@ -130,9 +130,6 @@ export const FEED_STYLES = `
   padding: 12px;
   margin: 10px 0;
 }
-  background: #14161a; border: 1px solid #8ab4f8; border-radius: 12px;
-  padding: 12px; margin: 12px 0; display: grid; gap: 10px;
-}
 .metube-inspector-header { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .metube-inspector-header h3 { margin: 0; font-size: 15px; flex: 1 1 auto; }
 .metube-inspector-header button {
@@ -294,6 +291,7 @@ export const FEED_STYLES = `
 .metube-active-strip .metube-active-name { color: #8ab4f8; font-weight: 600; }
 .metube-active-strip .metube-active-summary { color: #9aa0a6; flex: 1 1 200px; }
 .metube-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.metube-tab-cell { display: inline-flex; align-items: center; }
 .metube-tab {
   background: transparent; color: #9aa0a6; border: 1px solid transparent;
   border-radius: 18px; padding: 5px 14px; font-size: 13px; cursor: pointer;
@@ -376,4 +374,116 @@ export const FEED_STYLES = `
 }
 .metube-saved-empty { color: #9aa0a6; font-size: 14px; }
 .metube-prov-unknown { color: #f5c26b; font-size: 12px; }
+
+/* Guided tour overlay — Phase: first-use onboarding. */
+.metube-tour {
+  position: sticky; bottom: 12px; z-index: 22000;
+  max-width: 640px; margin: 12px auto; padding: 0 12px;
+}
+.metube-tour-card {
+  background: #14161a; border: 1px solid #8ab4f8; border-radius: 12px;
+  padding: 14px; display: grid; gap: 8px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+}
+.metube-tour-title { margin: 0; font-size: 15px; color: #8ab4f8; }
+.metube-tour-card p { margin: 0; font-size: 13px; color: #e8eaed; }
+.metube-tour-facts {
+  margin: 0; padding-left: 18px; font-size: 12.5px; color: #c6cad1;
+  display: grid; gap: 3px;
+}
+.metube-tour-facts li { margin: 0; }
+.metube-tour-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.metube-tour-choices button,
+.metube-tour-optin button { background: #2a2f36; color: #e8eaed; border: 1px solid #3a4048; border-radius: 18px; padding: 6px 14px; font-size: 13px; cursor: pointer; }
+.metube-tour-choices button:hover, .metube-tour-optin button:hover { border-color: #8ab4f8; }
+.metube-tour-choices label {
+  display: flex; align-items: baseline; gap: 6px; font-size: 12.5px;
+  color: #c6cad1; border: 1px solid #3a4048; border-radius: 12px;
+  padding: 6px 10px; cursor: pointer;
+}
+.metube-tour-choices label:has(input:checked) { border-color: #8ab4f8; }
+.metube-tour-optin {
+  border: 1px dashed #3ea6ff66; border-radius: 10px; padding: 10px;
+  display: grid; gap: 8px;
+}
+.metube-tour-disclaimer {
+  margin: 0; font-size: 12.5px; color: #f5c26b;
+}
+.metube-tour-creator { display: grid; gap: 8px; }
+.metube-tour-creator label { font-size: 12px; color: #9aa0a6; }
+.metube-tour-subject {
+  background: #0f0f0f; color: #e8eaed; border: 1px solid #3a4048;
+  border-radius: 8px; padding: 8px 10px; font-size: 13px; width: 100%;
+  box-sizing: border-box;
+}
+.metube-tour-preview { font-size: 11px; color: #9aa0a6; overflow-x: auto; }
+.metube-tour-confirm { border-color: #8ab4f8 !important; }
+.metube-tour-footer {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  border-top: 1px solid #2a2f36; padding-top: 10px;
+}
+.metube-tour-steps { font-size: 11px; color: #9aa0a6; flex: 1 1 auto; }
+.metube-tour-skip { background: none; border: none; color: #9aa0a6; font-size: 12px; cursor: pointer; text-decoration: underline; padding: 4px; }
+.metube-tour-skip:hover { color: #e8eaed; }
+.metube-tour-nav { display: flex; gap: 8px; }
+.metube-tour-nav button {
+  background: #2a2f36; color: #e8eaed; border: 1px solid #3a4048;
+  border-radius: 16px; padding: 5px 14px; font-size: 13px; cursor: pointer;
+}
+.metube-tour-nav button:disabled { opacity: 0.45; cursor: default; }
+.metube-tour-next { border-color: #8ab4f8; }
+.metube-tour-next:hover { background: #1f2733; }
+.metube-tour-raw pre, .metube-tour-preview {
+  margin: 6px 0 0; font-size: 11px; color: #9aa0a6; white-space: pre-wrap;
+}
+.metube-tour-lookfor, .metube-tour-style, .metube-tour-assumptions {
+  border-left: 2px solid #2a2f36; padding-left: 8px;
+}
+.metube-tour-lookfor h4, .metube-tour-style h4, .metube-tour-assumptions h4 { margin: 0 0 4px; font-size: 11px; color: #8ab4f8; text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* Contextual help tooltips. */
+.metube-help { position: relative; margin-left: 4px; display: inline-block; }
+.metube-help-btn {
+  background: none; border: 1px solid #3a4048; color: #9aa0a6;
+  border-radius: 50%; width: 16px; height: 16px; line-height: 14px;
+  font-size: 10px; cursor: pointer; padding: 0; vertical-align: middle;
+}
+.metube-help-btn:hover { color: #8ab4f8; border-color: #8ab4f8; }
+.metube-help-pop {
+  position: absolute; left: 22px; top: -6px; z-index: 23000;
+  background: #14161a; border: 1px solid #8ab4f8; border-radius: 8px;
+  padding: 8px 10px; width: 260px; font-size: 12px; color: #e8eaed;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.55);
+}
+.metube-help-pop::before { content: none; }
+
+/* Help menu (About / replay guided tour). */
+.metube-help-menu {
+  background: #14161a; border: 1px solid #8ab4f8; border-radius: 10px;
+  padding: 12px; display: grid; gap: 8px; max-width: 420px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+}
+.metube-help-menu p { margin: 0; font-size: 12.5px; color: #c6cad1; }
+.metube-help-menu button {
+  justify-self: start; background: #2a2f36; color: #e8eaed;
+  border: 1px solid #3a4048; border-radius: 16px; padding: 6px 14px;
+  font-size: 13px; cursor: pointer;
+}
+.metube-help-menu button:hover { border-color: #8ab4f8; }
+
+/* Demo Viewpoint management (Viewpoints tab). */
+.metube-demo-management {
+  border: 1px dashed #3a4048; border-radius: 10px; padding: 12px;
+  display: grid; gap: 8px; margin-top: 12px;
+}
+.metube-demo-management p { margin: 0; font-size: 12.5px; color: #9aa0a6; }
+.metube-demo-management button {
+  justify-self: start; background: #2a2f36; color: #e8eaed;
+  border: 1px solid #3a4048; border-radius: 16px; padding: 6px 14px;
+  font-size: 13px; cursor: pointer;
+}
+.metube-demo-management button:hover { border-color: #8ab4f8; }
+
+/* Onboarding primary path (guided tour). */
+.metube-onboarding-tour { border-color: #8ab4f8; }
 `;

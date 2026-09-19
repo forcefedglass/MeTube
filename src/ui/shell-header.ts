@@ -8,6 +8,7 @@
 
 import type { Viewpoint } from '../model/viewpoint';
 import { summarizeViewpoint } from '../model/viewpoint';
+import { renderHelpToggle } from './help-tooltips';
 
 export interface ShellHeaderCallbacks {
   onSwitch: (viewpointId: string) => void;
@@ -78,14 +79,26 @@ export interface TabBarCallbacks {
 export function renderTabBar(active: ShellTab, callbacks: TabBarCallbacks): HTMLElement {
   const bar = document.createElement('nav');
   bar.className = 'metube-tabs';
+  // Contextual help (?): the first-use onboarding spec asks for
+  // "What is this?" affordances on the main surfaces. Tab-level topics.
+  const tabHelp: Record<ShellTab, Parameters<typeof renderHelpToggle>[0]> = {
+    viewstream: 'viewstream',
+    viewpoints: 'viewpoint',
+    viewlists: 'viewlist',
+    coverage: 'coverage',
+    saved: 'viewlist',
+  };
   for (const tab of SHELL_TABS) {
+    const cell = document.createElement('span');
+    cell.className = 'metube-tab-cell';
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'metube-tab';
     btn.textContent = tab.label;
     btn.dataset.active = String(active === tab.id);
     btn.addEventListener('click', () => callbacks.onSelect(tab.id));
-    bar.append(btn);
+    cell.append(btn, renderHelpToggle(tabHelp[tab.id]));
+    bar.append(cell);
   }
   return bar;
 }

@@ -103,9 +103,29 @@ full-screen overlay shell:
 - **SAVED** — explicit saves by captured-at.
 
 First run shows a one-time onboarding gate stating Slipgate does not
-attempt to determine what the user should believe, offering five generic
-editable starter Viewpoints or an empty start. The gate shows once
-(`onboarded` KV flag).
+attempt to determine what the user should believe, offering three
+paths: the guided tour ("Show me how it works"), five generic editable
+starter Viewpoints, or an empty start (fully working product either
+way). The gate shows once (`onboarded` KV flag).
+
+The guided tour is a 15-step overlay that teaches through use — each
+step opens the surface it explains and reads live runtime values (real
+provenance chain, real autopsy metrics, real coverage totals, honest
+discovery-plan cap note), never fabricated numbers. Steps: welcome →
+what is a Viewpoint → demo choice → Viewpoint details → build a
+Viewstream → first card + provenance → Unknown is honest → feed
+autopsy → coverage → compare Viewpoints (composition facts only) →
+feedback semantics → exploration firewall → change something (real
+config change with UNDO) → create your own (simplified creator) →
+done. Next/Back/Skip on every step, no modal prison. Tour state
+persists separately (`guided-tour-state` KV key) from Viewpoint
+preference data; replay is available any time from the Help menu.
+Political-perspective demos exist only behind an explicit confirmed
+opt-in with a disclaimer ("These are test lenses, not truth labels.
+…using one does not define your political identity."); they are marked
+DEMO INSTANCE instances, removable in one action, and removal spares
+user forks. Contextual (?) help toggles sit on every tab and major
+panel heading.
 
 ## Implemented System
 
@@ -668,24 +688,30 @@ Only risks that materially matter to this codebase:
 
 ## Validation Snapshot
 
-- typecheck: clean. tests: 160/160. build (Chromium): ok.
+- typecheck: clean. tests: 201/201 (178 baseline + 23 guided-tour
+  tests in `tests/tour.test.ts`). build (Chromium): ok.
   build:firefox + package:firefox: ok (manifest name "Slipgate", gecko id
-  `metube@metube.local`, v0.6.0, zip integrity ok).
-- Firefox E2E: 26/26 pass. Chromium E2E regression: all pass.
+  `metube@metube.local`, v0.7.0, zip integrity ok).
+- Firefox E2E: Phase 5 regression matrix 26/26; guided-onboarding
+  walkthrough (fresh profile, persistent install) 64/64 — three-path
+  gate, full tour with live values, disclaimer-before-opt-in, demo
+  add/remove isolation, fork survival, mid-tour skip, replay, SPA-nav
+  and reload non-duplication.
+- Chromium E2E: Phase 5 regression clean; onboarding E2E 38/38, no page
+  errors.
 - Identity audit: all current user-facing surfaces say "Slipgate";
   internal identifiers, storage keys, format ids, and file names retain
   "MeTube" intentionally; historical changelog entries unchanged.
 - Current identity (post-Slipgate pass): manifest name "Slipgate" in both
   build targets; public tagline "Escape Your Walled Garden." shown on
-  onboarding and README only.
+  onboarding, tour welcome, help menu, and README only.
 
 ## Current Commit
 
-This crystallization pass records the repository at Phase 5, v0.6.0
-(`bfdc6c5`, "Phase 5: daily-use product (v0.6.0)", branch main). The
-crystallization commit ("crystallize YourTube project state", `284ddde`)
-was followed by the Slipgate identity pass ("adopt Slipgate product
-identity"). Public identity history: MeTube (internal codename and
-original public name) → YourTube (interim public name, 2026-09-19) →
-Slipgate (current public name, with tagline "Escape Your Walled Garden.").
-Internal identifiers have been "MeTube" throughout and remain so.
+This record describes the repository after Phase 6 (guided first-use
+onboarding, v0.7.0). Phase 5 stood at `bfdc6c5` ("Phase 5: daily-use
+product (v0.6.0)", branch main). Public identity history: MeTube
+(internal codename and original public name) → YourTube (interim public
+name, 2026-09-19) → Slipgate (current public name, with tagline
+"Escape Your Walled Garden."). Internal identifiers have been "MeTube"
+throughout and remain so.

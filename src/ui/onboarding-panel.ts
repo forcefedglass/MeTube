@@ -1,18 +1,28 @@
 /**
- * Onboarding panel — Phase 5.
+ * Onboarding panel — first-use gate.
  *
- * The one-time first-open screen. It states what MeTube is and is not,
- * and offers the optional generic starter Viewpoints. Declining leaves a
- * fully working product.
+ * The one-time first-open screen. It states what Slipgate is and is not,
+ * then offers three paths forward:
+ *
+ *   [ Show me how it works ]        — the guided tour (resumable, skippable)
+ *   [ Start with starter Viewpoints ] — the optional generic starters
+ *   [ Start empty ]                 — decline everything; fully working product
+ *
+ * FROZEN RULES (unchanged from Phase 5):
+ *   - The wording never suggests any perspective is correct, balanced,
+ *     recommended, or worth adopting.
+ *   - Declining everything leaves a fully working product.
+ *   - Onboarding shows once; re-showing is an explicit user action.
  */
 
 import { ONBOARDING_TEXT } from '../viewpoints/onboarding';
-import { starterViewpoints } from '../viewpoints/starters';
 
 export interface OnboardingCallbacks {
+  /** Start the guided tour (explicit user choice). */
+  onStartTour: () => void;
   /** Accept the optional starter Viewpoints (they are editable). */
   onAcceptStarters: () => void;
-  /** Decline: skip starters, finish onboarding. */
+  /** Decline: skip everything, finish onboarding. */
   onDecline: () => void;
 }
 
@@ -31,29 +41,29 @@ export function renderOnboardingPanel(callbacks: OnboardingCallbacks): HTMLEleme
     p.textContent = paragraph;
     wrap.append(p);
   }
-  const startersList = document.createElement('ul');
-  for (const s of starterViewpoints()) {
-    const li = document.createElement('li');
-    li.textContent = `${s.title} — ${s.description}`;
-    startersList.append(li);
-  }
-  const startersIntro = document.createElement('p');
-  startersIntro.textContent =
-    'Optionally start from these generic, fully editable starter Viewpoints. They demonstrate mechanisms ' +
-    '(constraints, budgets, windows) and take no positions. You can also decline and author your own from scratch.';
-  wrap.append(startersIntro, startersList);
 
   const actions = document.createElement('div');
   actions.className = 'metube-onboarding-actions';
-  const accept = document.createElement('button');
-  accept.type = 'button';
-  accept.textContent = 'Add starter Viewpoints (editable)';
-  accept.addEventListener('click', () => callbacks.onAcceptStarters());
+
+  const tour = document.createElement('button');
+  tour.type = 'button';
+  tour.className = 'metube-onboarding-tour';
+  tour.textContent = 'Show me how it works';
+  tour.addEventListener('click', () => callbacks.onStartTour());
+  actions.append(tour);
+
+  const starters = document.createElement('button');
+  starters.type = 'button';
+  starters.textContent = 'Start with starter Viewpoints';
+  starters.addEventListener('click', () => callbacks.onAcceptStarters());
+  actions.append(starters);
+
   const decline = document.createElement('button');
   decline.type = 'button';
   decline.textContent = 'Start empty — I will author my own';
   decline.addEventListener('click', () => callbacks.onDecline());
-  actions.append(accept, decline);
+  actions.append(decline);
+
   wrap.append(actions);
   return wrap;
 }

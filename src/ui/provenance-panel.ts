@@ -9,12 +9,14 @@
 
 import type { ProvenanceChain } from '../viewpoints/provenance';
 import { PROVENANCE_LINK_LABELS } from '../viewpoints/provenance';
+import { renderHelpToggle } from './help-tooltips';
 
 export function renderProvenancePanel(chain: ProvenanceChain): HTMLElement {
   const wrap = document.createElement('section');
   wrap.className = 'metube-provenance';
   const h = document.createElement('h4');
   h.textContent = `Why this appeared — full trace (${chain.title})`;
+  h.append(renderHelpToggle('provenance'));
   wrap.append(h);
 
   // Step 1: Viewpoint rule

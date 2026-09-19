@@ -10,6 +10,7 @@
  */
 
 import type { CoverageMap } from '../model/classification';
+import { renderHelpToggle } from './help-tooltips';
 
 export function renderCoverageMap(map: CoverageMap): HTMLElement {
   const section = document.createElement('section');
@@ -17,6 +18,7 @@ export function renderCoverageMap(map: CoverageMap): HTMLElement {
 
   const heading = document.createElement('h3');
   heading.textContent = 'Coverage map';
+  heading.append(renderHelpToggle('coverage'));
   section.append(heading);
 
   const intro = document.createElement('p');

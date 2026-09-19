@@ -182,17 +182,41 @@ Principles.
   never manufactured. No architecture, ranking, classification, or
   persistence behavior changed; starters/demo/user Viewpoints untouched;
   the starter political-vocabulary ban stays intact and test-enforced.
+- 2026-09-19 (Phase 6, guided onboarding): First-run gate offers three
+  paths — guided tour, starter Viewpoints, or empty (all fully working).
+  Guided tour teaches through USE with live runtime values (real
+  provenance chain, real autopsy metrics, real coverage totals, honest
+  MAX_PLAN_STEPS=6 cap note) and never fabricated numbers; 15 steps,
+  Next/Back/Skip on every step, no modal prison. Tour state persists
+  under its own KV key `guided-tour-state` (separate from Viewpoint
+  preference data); never-started never auto-shows; replay available
+  from the Help menu. Political-perspective demos reach the product
+  ONLY via the tour's explicit opt-in with the exact disclaimer wording;
+  demo instances are marked DEMO INSTANCE, removable in one action, and
+  removal spares user forks (id-exact `vp-test-demo-0..3`). No
+  Viewpoint is ever described as more balanced/accurate/moderate/extreme
+  than another; comparison reports composition facts only. Demo config
+  change (explorationPercent 0.5) is a real change with real recompose
+  and UNDO; bookkeeping is in-memory only (reload mid-demo leaves an
+  ordinary visible setting). Simplified creator maps one plain question
+  + five change types onto a real ViewpointConfig overlay. The frozen
+  source-audit rule evolved deliberately: content.ts may not import
+  test-viewpoints directly; the only production import path is
+  src/onboarding/demo-viewpoints.ts (explicit opt-in wrapper). Tour
+  state and demo opt-in never infer or record political identity.
 
 ## Verification commands
 
 ```sh
 npm run typecheck
-npm test                   # 178 tests
+npm test                   # 201 tests
 npm run build              # Chromium dist/
 npm run build:firefox      # Firefox dist-firefox/
 npm run package:firefox    # metube-firefox.xpi
 # Firefox E2E (fresh profile per run, persistent install):
-#   /tmp/metube-ff-matrix-final.py
+#   /tmp/metube-ff-matrix-final.py       (Phase 5 regression, 26 checks)
+#   /tmp/metube-ff-onboarding.py         (Phase 6 onboarding walkthrough, 64 checks)
 # Chromium E2E (fresh profile per run):
-#   /tmp/metube-chromium-phase5.js
+#   /tmp/metube-chromium-phase5.js      (Phase 5 regression)
+#   /tmp/metube-chromium-onboarding.js   (Phase 6 onboarding, 38 checks)
 ```

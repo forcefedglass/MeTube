@@ -2,6 +2,87 @@
 
 All notable changes to MeTube. Dates are system dates.
 
+## 2026-09-19 — Guided first-use onboarding (Phase 6)
+
+### Added
+
+- **Three-path first-run gate** (`src/ui/onboarding-panel.ts`): a
+  first-time user chooses "Show me how it works" (the guided tour),
+  "Start with starter Viewpoints" (the five generic starters, unchanged
+  behavior), or "Start empty — I will author my own". Declining
+  everything still leaves a fully working product; onboarding shows
+  once, and re-showing is always an explicit user action.
+- **Guided tour** (`src/ui/tour-panel.ts`, 15 steps): teaches each
+  mechanism through USE — SHOW → EXPLAIN → LET ME CHANGE IT. Step bodies
+  read live runtime values (real provenance chains, real autopsy
+  metrics, real coverage totals, real discovery-plan counts including
+  the honest MAX_PLAN_STEPS=6 cap note), never fabricated numbers.
+  Next/Back on every step, "Skip tour" always available, no modal
+  prison — the product stays interactive beneath the overlay. The tour
+  navigates to the surface each step teaches.
+- **Tour state machine** (`src/onboarding/tour-state.ts`): status
+  never-started / in-progress / completed / skipped plus current step,
+  persisted under its own IndexedDB key (`guided-tour-state`), entirely
+  separate from Viewpoint preference data. Never-started never
+  auto-shows; replay is available from the Help menu ("Start guided
+  tour" / "Replay guided tour").
+- **Opt-in demo mechanism** (`src/onboarding/demo-viewpoints.ts`):
+  promotes marked copies (`DEMO INSTANCE`) of the four TEST-SEED
+  political Viewpoints ONLY through an explicit confirmed opt-in with
+  the exact disclaimer wording ("These are test lenses, not truth
+  labels. … using one does not define your political identity.").
+  Removal removes exactly the four demo instances (`vp-test-demo-0..3`);
+  user forks carry different ids and always survive. No Viewpoint is
+  described as more balanced, accurate, moderate, or extreme than
+  another; comparisons report composition facts only.
+- **Demo config change with UNDO** (tour step 13): applying the demo
+  change edits explorationPercent on the active Viewpoint and
+  recomposes; "Undo demo change" restores the prior value. The change
+  is an ordinary visible editable setting.
+- **Simplified Viewpoint creator** (tour step 14): "What do you want
+  another view of?" plus five plain-English change types
+  (unfamiliar channels, source spread, wide window, primary sources,
+  plain lens), with a live merged-config preview and a raw-settings
+  reveal.
+- **Contextual help** (`src/ui/help-tooltips.ts`): (?) toggles on all
+  five tabs and the exposure, autopsy, provenance, Time Machine,
+  coverage, assumptions, and dimension headings; one popover at a time;
+  help text never editorializes perspectives.
+- **Help menu** (shell header): About paragraph plus guided-tour
+  start/replay entry depending on tour status.
+
+### Fixed
+
+- Removed a pre-existing orphaned CSS block in `src/ui/styles.ts`
+  (left dangling when a `.metube-inspector` selector was dropped during
+  Phase 5).
+
+### Unchanged (intentional)
+
+- No change to discovery, ranking, classification, composition,
+  storage architecture, feedback semantics, or the exploration
+  firewall.
+- Starters remain non-political; the general demo path seeds the
+  existing starters. Political demos exist only behind the tour's
+  explicit opt-in.
+- Tour progress and demo opt-in state never infer or record political
+  identity; no Viewpoint is ever scored as more balanced or truthful
+  than another.
+
+### Verified
+
+- `npm run typecheck` clean; `npm test`: 201/201 passing (178 baseline
+  + 23 new in `tests/tour.test.ts`).
+- `npm run build`, `npm run build:firefox`, `npm run package:firefox`
+  succeed; both manifests still identify Slipgate.
+- Firefox E2E (§21 walkthrough, fresh profile, persistent install):
+  64/64 checks — three-path gate, full 15-step tour with live values,
+  disclaimer-before-opt-in, demo add/remove isolation, fork survival,
+  mid-tour skip, replay, SPA-nav and reload non-duplication.
+- Firefox Phase 5 regression matrix: 26/26 checks (re-run unchanged).
+- Chromium onboarding E2E: 38/38 checks; Phase 5 Chromium regression
+  clean (no page errors).
+
 ## 2026-09-19 — US political discovery test viewpoints
 
 ### Changed

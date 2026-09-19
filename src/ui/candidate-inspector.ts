@@ -24,6 +24,23 @@ import {
   TEMPORAL_POSITION_LABELS,
 } from '../model/classification';
 import type { ClassificationOverride } from '../model/classification';
+import { renderHelpToggle } from './help-tooltips';
+import type { HelpTopic } from './help-tooltips';
+
+/** Map a classification dimension to its contextual-help topic. */
+function dimensionHelpTopic(dimension: ClassificationDimension): HelpTopic {
+  switch (dimension) {
+    case 'sourceType':
+      return 'source-type';
+    case 'narrativeCluster':
+      return 'narrative-cluster';
+    case 'temporalPosition':
+      return 'time-machine';
+    case 'topics':
+    default:
+      return 'coverage';
+  }
+}
 
 export interface InspectorCallbacks {
   /** Set an override for a video + dimension. */
@@ -167,6 +184,7 @@ function renderSingle(
   box.className = 'metube-inspector-dimension';
   const heading = document.createElement('h4');
   heading.textContent = DIMENSION_LABELS[dimension];
+  heading.append(renderHelpToggle(dimensionHelpTopic(dimension)));
   box.append(heading);
   const valueLine = document.createElement('p');
   valueLine.className = value.value === 'unknown' ? 'metube-inspector-unknown' : '';
@@ -189,6 +207,7 @@ function renderDimension(
   box.className = 'metube-inspector-dimension';
   const heading = document.createElement('h4');
   heading.textContent = DIMENSION_LABELS[dimension];
+  heading.append(renderHelpToggle(dimensionHelpTopic(dimension)));
   box.append(heading);
   if (values.length === 0) {
     const empty = document.createElement('p');

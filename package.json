@@ -1,6 +1,6 @@
 {
   "name": "metube",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "description": "Slipgate — Escape Your Walled Garden. An independent discovery layer that lets you explore beyond your normal recommendation feed through user-controlled Viewpoints. Not affiliated with YouTube or Google.",
   "license": "MIT",

@@ -15,6 +15,7 @@ import { emptyUserProfile } from '../model/types';
 import type { UserProfile } from '../model/types';
 import { FixtureCandidateProvider } from '../discovery/fixture-provider';
 import { YouTubeWebProvider } from '../discovery/youtube-web';
+import { deriveDiscoveryPlan } from '../model/discovery';
 import type { PlanCapableProvider } from '../discovery/provider';
 import type { HtmlFetch } from '../discovery/youtube-web';
 import { assembleFeed } from '../discovery/assemble-feed';
@@ -32,6 +33,7 @@ import { renderFeedCard } from '../ui/feed-card';
 import { FEED_STYLES } from '../ui/styles';
 import { openViewpointRepository } from '../viewpoints/repository';
 import type { Viewpoint, TimeMachineConfig } from '../model/viewpoint';
+import { newViewpoint } from '../model/viewpoint';
 import { renderViewpointManager } from '../ui/viewpoint-manager';
 import { renderPoolInspector } from '../ui/pool-inspector';
 import { renderCandidateInspector } from '../ui/candidate-inspector';
@@ -59,6 +61,25 @@ import { renderProvenancePanel } from '../ui/provenance-panel';
 import { renderOnboardingPanel } from '../ui/onboarding-panel';
 import { renderPortabilityPanel, renderPortabilityResult } from '../ui/portability-panel';
 import { renderSavedPanel } from '../ui/saved-panel';
+import { renderTourPanel } from '../ui/tour-panel';
+import { simplifiedConfigOverlay } from '../ui/tour-panel';
+import { renderHelpToggle, dismissHelpPopups } from '../ui/help-tooltips';
+import type { TourStepId, TourState } from '../onboarding/tour-state';
+import {
+  readTourState,
+  startTour,
+  setTourStep,
+  completeTour,
+  skipTour,
+  currentTourStep,
+  TOUR_STEP_IDS,
+} from '../onboarding/tour-state';
+import {
+  optInToDemos,
+  removeDemoViewpoints,
+  demoComparePair,
+  isDemoViewpoint,
+} from '../onboarding/demo-viewpoints';
 import {
   readOnboardingState,
   markOnboarded,
@@ -172,6 +193,16 @@ interface ComposedContext {
 
 let lastComposed: ComposedContext | null = null;
 
+/**
+ * Tour demo-change bookkeeping (in-memory only): whether the harmless
+ * exploration-percent demo change is applied, and the prior value to
+ * restore on undo. Not persisted — if the page reloads mid-change the
+ * Viewpoint keeps the new value, which is an ordinary user-editable
+ * setting visible in the Viewpoints tab.
+ */
+let demoChangeState = false;
+let demoChangePrevious: number | null = null;
+
 /** Switch the active Viewpoint, then regenerate through the new lens. */
 async function switchViewpoint(viewpointId: string): Promise<void> {
   const repo = openViewpointRepository(store);
@@ -189,6 +220,7 @@ async function switchViewpoint(viewpointId: string): Promise<void> {
 async function showTab(tab: ShellTab): Promise<void> {
   activeTab = tab;
   feedVisible = true;
+  dismissHelpPopups(); // stale tooltips must not survive a re-render
   const mount = ensureMount();
   mount.className = 'metube-visible';
   if (!mounted) {
@@ -219,12 +251,18 @@ async function showTab(tab: ShellTab): Promise<void> {
   const title = document.createElement('h2');
   title.className = 'metube-shell-title';
   title.textContent = 'Slipgate';
+  const help = document.createElement('button');
+  help.type = 'button';
+  help.className = 'metube-shell-help';
+  help.textContent = 'Help';
+  help.addEventListener('click', () => void toggleHelpMenu(help));
+  header.append(title, help);
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button';
   closeBtn.className = 'metube-shell-close';
   closeBtn.textContent = 'Close';
   closeBtn.addEventListener('click', hideFeed);
-  header.append(title, closeBtn);
+  header.append(closeBtn);
   shell.append(header);
 
   // Active Viewpoint always visible + rapid switcher.
@@ -260,11 +298,26 @@ async function showTab(tab: ShellTab): Promise<void> {
   }
   shell.append(body);
   mount.append(shell);
+
+  // Guided tour overlay — rendered AFTER the tab body so the tour's step
+  // facts read the freshly composed context (live runtime values, never
+  // stale or fabricated ones).
+  const tourState = await readTourState(store);
+  if (tourState.status === 'in-progress') {
+    mount.append(await renderTourOverlay(tourState));
+  }
 }
 
 /** The onboarding screen wrapped as the whole shell. */
 function renderOnboardingShell(): HTMLElement {
   return renderOnboardingPanel({
+    onStartTour: () => {
+      void (async () => {
+        await markOnboarded(store);
+        await startTour(store, nowIso());
+        await showTab('viewstream');
+      })();
+    },
     onAcceptStarters: () => {
       void acceptStarters(store).then(async (added) => {
         await markOnboarded(store);
@@ -276,6 +329,313 @@ function renderOnboardingShell(): HTMLElement {
       void markOnboarded(store).then(() => showTab('viewstream'));
     },
   });
+}
+
+// ---------------------------------------------------------------------------
+// Guided tour overlay
+// ---------------------------------------------------------------------------
+
+/**
+ * Render the tour overlay for the current tour state. The step body is
+ * fed with RECORDED runtime facts (last composed context, acquisition
+ * run log, autopsy metrics, coverage counts) — never fabricated numbers.
+ */
+async function renderTourOverlay(tourState: TourState): Promise<HTMLElement> {
+  const step = currentTourStep(tourState);
+  const repo = openViewpointRepository(store);
+  const [viewpoints, active] = await Promise.all([repo.list(), repo.getActive()]);
+
+  // Recorded facts for the step bodies. lastComposed may be null (nothing
+  // generated yet) — the tour renders honestly without numbers then.
+  const ctx = lastComposed;
+  const [firstCard, buildFacts, autopsyMetrics, coverageFacts] = await Promise.all([
+    Promise.resolve(firstCardFactsFrom(ctx)),
+    Promise.resolve(buildFactsFrom(active)),
+    autopsyMetricSummariesFrom(ctx),
+    coverageFactsFrom(ctx),
+  ]);
+  // Compare step: the evidenced broad demo pair (marked instances only).
+  const pair = demoComparePair();
+  const demoCompare = pair
+    ? {
+        leftId: pair[0].id,
+        leftTitle: pair[0].title,
+        rightId: pair[1].id,
+        rightTitle: pair[1].title,
+      }
+    : null;
+
+  return renderTourPanel(
+    step,
+    {
+      activeViewpoint: active,
+      viewpoints,
+      firstCard,
+      buildFacts,
+      autopsyMetricSummaries: autopsyMetrics,
+      coverageFacts,
+      demoCompare,
+      demoChangeApplied: demoChangeState,
+    },
+    {
+      onNext: () => void advanceTour(step, 1),
+      onBack: () => void advanceTour(step, -1),
+      onSkip: () => {
+        void skipTour(store, nowIso()).then(() => showTab(activeTab));
+      },
+      onJump: (target) => {
+        void setTourStep(store, target, nowIso()).then(() => showTab(activeTab));
+      },
+      onStartGeneralDemo: () => {
+        // General path: seed the generic starter lenses, then activate
+        // the first so the following steps walk a real Viewpoint.
+        // Seeding is idempotent; activation here is part of the explicit
+        // demo request, and the user can switch or deactivate at any time.
+        void (async () => {
+          await acceptStarters(store);
+          const repo2 = openViewpointRepository(store);
+          const listed = await repo2.list();
+          const firstStarter = listed.find((v) => v.id.startsWith('vp-starter-')) ?? listed[0];
+          if (firstStarter) {
+            try {
+              await repo2.setActive(firstStarter.id);
+            } catch (err) {
+              console.warn('[MeTube] tour: could not activate starter', err);
+            }
+          }
+          lastComposed = null;
+          await setTourStep(store, 'viewpoint-details', nowIso());
+          await showTab('viewpoints');
+        })();
+      },
+      onRequestPoliticalDemo: () => {
+        // Explicit opt-in only — the disclaimer was shown and the user
+        // confirmed. Seeds marked demo copies of the four test lenses;
+        // user forks carry different ids and are never touched.
+        void (async () => {
+          await optInToDemos(repo);
+          const repo2 = openViewpointRepository(store);
+          const listed = await repo2.list();
+          const demo = listed.find((v) => v.id.startsWith('vp-test-demo-'));
+          if (demo) {
+            try {
+              await repo2.setActive(demo.id);
+            } catch (err) {
+              console.warn('[MeTube] tour: could not activate demo', err);
+            }
+          }
+          lastComposed = null;
+          await setTourStep(store, 'viewpoint-details', nowIso());
+          await showTab('viewpoints');
+        })();
+      },
+      onCompareViewpoint: (viewpointId) => {
+        // "Change the instructions, not your identity": switch the lens,
+        // regenerate, and come back to the compare step.
+        void (async () => {
+          try {
+            await repo.setActive(viewpointId);
+          } catch (err) {
+            console.warn('[MeTube] tour compare: could not activate', err);
+            return;
+          }
+          lastComposed = null;
+          await setTourStep(store, 'compare-viewpoints', nowIso());
+          await showTab('viewstream');
+        })();
+      },
+      onCreateSimplified: (subject, changeType) => {
+        // Simplified creator: plain question -> change-type choice ->
+        // exact config preview shown -> save. The config saved is
+        // EXACTLY the preview shown (both come from the same function).
+        void (async () => {
+          const now = nowIso();
+          const vp = newViewpoint(
+            `vp-${Date.now().toString(36)}`,
+            `Another view of: ${subject}`,
+            'Created during the guided tour — every field is editable in the Viewpoints tab.',
+            now,
+            simplifiedConfigOverlay(subject, changeType),
+          );
+          try {
+            await repo.create(vp);
+          } catch (err) {
+            console.warn('[MeTube] simplified creator failed', err);
+            return;
+          }
+          await setTourStep(store, 'done', nowIso());
+          await showTab('viewpoints');
+        })();
+      },
+      onToggleDemoChange: () => {
+        // ONE harmless interactive config change with explicit undo. The
+        // demo change edits explorationPercent on the active Viewpoint;
+        // the raw config IS the change and stays visible in the editor.
+        void (async () => {
+          const active = await repo.getActive();
+          if (!active) return;
+          const current = await repo.get(active.id);
+          if (!current) return;
+          const applied = demoChangeState;
+          try {
+            if (applied) {
+              await repo.update({
+                ...current,
+                config: {
+                  ...current.config,
+                  explorationPercent: demoChangePrevious ?? 0.2,
+                },
+                updatedAt: nowIso(),
+              });
+              demoChangeState = false;
+            } else {
+              demoChangePrevious = current.config.explorationPercent;
+              await repo.update({
+                ...current,
+                config: { ...current.config, explorationPercent: 0.5 },
+                updatedAt: nowIso(),
+              });
+              demoChangeState = true;
+            }
+          } catch (err) {
+            console.warn('[MeTube] tour demo change failed', err);
+            return;
+          }
+          lastComposed = null; // force recomposition through changed rules
+          await setTourStep(store, 'change-something', nowIso());
+          await showTab('viewstream');
+        })();
+      },
+    },
+  );
+}
+
+/** Move the tour one step forward or back; finish at the last step. */
+async function advanceTour(from: TourStepId, delta: 1 | -1): Promise<void> {
+  const idx = TOUR_STEP_IDS.indexOf(from);
+  const next = idx + delta;
+  if (next < 0) return;
+  if (next >= TOUR_STEP_IDS.length) {
+    await completeTour(store, nowIso());
+  } else {
+    await setTourStep(store, TOUR_STEP_IDS[next], nowIso());
+    // Teach through USE: each step opens the surface it explains so the
+    // step body reads real, freshly composed runtime values.
+    const step = TOUR_STEP_IDS[next];
+    const targetTab: ShellTab | null =
+      step === 'what-is-a-viewpoint' || step === 'demo-choice' || step === 'viewpoint-details' || step === 'create-your-own'
+        ? 'viewpoints'
+        : step === 'build-viewstream' || step === 'first-card' || step === 'unknown-is-honest' || step === 'compare-viewpoints' || step === 'change-something'
+          ? 'viewstream'
+          : step === 'feed-autopsy' || step === 'coverage'
+            ? 'coverage'
+            : null;
+    if (targetTab) {
+      await showTab(targetTab);
+      return;
+    }
+  }
+  await showTab(activeTab);
+}
+
+/** First-card facts from the last composed context (recorded data only). */
+function firstCardFactsFrom(
+  ctx: ComposedContext | null,
+): import('../ui/tour-panel').FirstCardFacts | null {
+  if (!ctx || ctx.snapshot.feed.length === 0) return null;
+  const item = ctx.snapshot.feed[0];
+  const classification = ctx.lookup(item.candidate.id);
+  // The same provenance chain the card inspector renders — recorded facts
+  // only, UNKNOWN never speculated.
+  const chain = buildProvenanceChain({
+    item,
+    viewpoint: ctx.activeViewpoint,
+    classification,
+    poolProvenance: null,
+    inclusion: inclusionBasisFor(item, ctx),
+  });
+  return {
+    viewpointTitle: chain.viewpointRule.viewpointTitle,
+    foundBecauseOf: chain.discovery ? chain.discovery.seed : null,
+    discoverySource: item.candidate.discoveredVia,
+    sourceType: classification ? classification.sourceType.value : null,
+    narrativeCluster: classification ? classification.narrativeCluster.value : null,
+    reason: chain.inclusion ? chain.inclusion.statement : item.reason,
+  };
+}
+
+/** Build facts from the active Viewpoint + its discovery plan (recorded). */
+function buildFactsFrom(
+  active: Viewpoint | null,
+): import('../ui/tour-panel').BuildFacts | null {
+  if (!active) return null;
+  const seedIdeaCount =
+    active.config.seedConcepts.length + active.config.seedTopics.length;
+  const plan = deriveDiscoveryPlan(
+    active.id,
+    active.config.seedTopics,
+    active.config.seedConcepts,
+    nowIso(),
+    active.config.seedChannels,
+    makeTopicLabelResolver(),
+    active.config.seedPlaylists,
+  );
+  const seedSearchSteps = plan.steps.filter(
+    (s: import('../model/discovery').AcquisitionStep): boolean => s.method === 'seed-search',
+  );
+  const executedQueries = seedSearchSteps.map(
+    (s: import('../model/discovery').AcquisitionStep): string => s.target,
+  );
+  const pool = lastComposed
+    ? lastComposed.poolCandidates.length
+    : 0;
+  return {
+    seedIdeaCount,
+    executedStepCount: plan.steps.length,
+    executedQueries,
+    // Pool size is a recorded value when a Viewstream has been composed;
+    // 0 honestly means "nothing generated yet" (the step body renders a
+    // "generate first" hint in that case via firstCard/buildFacts presence).
+    candidatesFound: pool,
+    duplicatesRemoved: 0,
+    retainedForComposition: lastComposed ? lastComposed.snapshot.feed.length : 0,
+  };
+}
+
+/** Autopsy summaries (first 3-4) from the last composed context. */
+async function autopsyMetricSummariesFrom(
+  ctx: ComposedContext | null,
+): Promise<Array<{ id: string; label: string; value: string }>> {
+  if (!ctx || ctx.snapshot.feed.length === 0) return [];
+  const profile = await loadProfile();
+  // Computed from recorded feed + pool data — the same function the
+  // Coverage tab uses. The tour shows the first few metrics; the full
+  // autopsy stays on the Coverage tab.
+  const autopsy = computeFeedAutopsy(
+    ctx.snapshot.feed,
+    ctx.poolCandidates,
+    ctx.activeViewpoint,
+    profile,
+    ctx.lookup,
+    ctx.exposureReport,
+    nowIso(),
+  );
+  return autopsy.metrics.map((m) => ({ id: m.id, label: m.label, value: m.value }));
+}
+
+/** Coverage totals from the last composed context. */
+async function coverageFactsFrom(
+  ctx: ComposedContext | null,
+): Promise<{ totalCandidates: number; unclassified: number; unknownDates: number } | null> {
+  if (!ctx) return null;
+  const profile = await loadProfile();
+  const feedCands = ctx.snapshot.feed.map((f) => f.candidate);
+  const coverage = computeCoverageMap(feedCands, ctx.lookup, profile, nowIso());
+  return {
+    totalCandidates: coverage.totalCandidates,
+    unclassified: coverage.unclassified,
+    unknownDates: coverage.unknownDates,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -374,6 +734,7 @@ async function renderViewstreamTab(active: Viewpoint | null): Promise<HTMLElemen
       assumptions.className = 'metube-assumptions';
       const h4 = document.createElement('h4');
       h4.textContent = 'Assumptions for this Viewpoint (authored by you; never inferred)';
+      h4.append(renderHelpToggle('assumption'));
       assumptions.append(h4);
       const ul = document.createElement('ul');
       for (const a of active.config.assumptions) {
@@ -484,6 +845,35 @@ async function renderViewpointsTab(
       onRefreshFeed: () => void showTab('viewpoints'),
     }),
   );
+
+  // Demo-instance management: removal is always available when demo
+  // instances exist. User forks carry different ids and are untouched.
+  const demoInstances = viewpoints.filter((v) => isDemoViewpoint(v));
+  if (demoInstances.length > 0) {
+    const box = document.createElement('div');
+    box.className = 'metube-demo-management';
+    const note = document.createElement('p');
+    note.textContent =
+      `${demoInstances.length} demo Viewpoint${demoInstances.length === 1 ? '' : 's'} present (marked DEMO INSTANCE). ` +
+      'They are ordinary Viewpoints — editable, duplicable, deletable. Removing the demos removes only the marked demo instances; any copies or forks you made keep their own ids and stay.';
+    box.append(note);
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.textContent = 'Remove demo Viewpoints';
+    removeBtn.addEventListener('click', () => {
+      void (async () => {
+        const removed = await removeDemoViewpoints(repo);
+        if (active && removed.includes(active.id)) {
+          lastComposed = null;
+          await showTab('viewpoints');
+        } else {
+          await showTab('viewpoints');
+        }
+      })();
+    });
+    box.append(removeBtn);
+    wrap.append(box);
+  }
   return wrap;
 }
 
@@ -936,6 +1326,42 @@ function hideFeed(): void {
 function toggleFeed(): void {
   if (feedVisible) hideFeed();
   else void showTab('viewstream');
+}
+
+/**
+ * Help menu — About + replay entry points. Explicit user action only;
+ * replay never auto-starts and never resets onboarding.
+ */
+async function toggleHelpMenu(anchor: HTMLElement): Promise<void> {
+  const existing = document.getElementById('metube-help-menu');
+  if (existing) {
+    existing.remove();
+    return;
+  }
+  const menu = document.createElement('div');
+  menu.id = 'metube-help-menu';
+  menu.className = 'metube-help-menu';
+
+  const about = document.createElement('p');
+  about.textContent =
+    'Slipgate — Escape Your Walled Garden. An independent exploration lens over YouTube: you author Viewpoints; discovery, classification, ranking, and inclusion are all inspectable. Slipgate never infers your identity from the Viewpoints you use.';
+  menu.append(about);
+
+  const tourState = await readTourState(store);
+  const replay = document.createElement('button');
+  replay.type = 'button';
+  replay.textContent =
+    tourState.status === 'never-started' ? 'Start guided tour' : 'Replay guided tour';
+  replay.addEventListener('click', () => {
+    document.getElementById('metube-help-menu')?.remove();
+    void (async () => {
+      await startTour(store, nowIso());
+      await showTab('viewstream');
+    })();
+  });
+  menu.append(replay);
+
+  anchor.after(menu);
 }
 
 function injectStyles(): void {
