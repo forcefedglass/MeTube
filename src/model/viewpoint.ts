@@ -26,6 +26,7 @@ import type {
   TopicId,
   ViewpointId,
 } from './types';
+import type { ExposureBudget } from './exposure';
 
 /** What familiarity target the Viewpoint asks for. */
 export type UnfamiliarityTarget =
@@ -132,6 +133,14 @@ export interface ViewpointConfig {
    * silently.
    */
   assumptions: string[];
+  /**
+   * Exposure budget (Phase 4): visible, editable bounds on how this
+   * Viewpoint's Viewstream spends its slots — max single-channel share,
+   * min unfamiliar share, cooldowns, and more. Every rule is enforced (or
+   * honestly reported as violated) by the composer. See
+   * src/model/exposure.ts.
+   */
+  exposureBudget: ExposureBudget;
 }
 
 export interface Viewpoint {
@@ -181,6 +190,7 @@ export function defaultViewpointConfig(): ViewpointConfig {
     weightOverrides: [],
     baselineContext: '',
     assumptions: [],
+    exposureBudget: {},
   };
 }
 
@@ -257,6 +267,10 @@ export function summarizeViewpoint(vp: Viewpoint): string {
   }
   if (vp.config.assumptions.length > 0) {
     parts.push(`${vp.config.assumptions.length} assumption(s), shown below`);
+  }
+  const budgetRules = Object.keys(vp.config.exposureBudget).length;
+  if (budgetRules > 0) {
+    parts.push(`exposure budget: ${budgetRules} rule(s), shown below`);
   }
   if (parts.length === 0) return 'no constraints';
   return parts.join(' · ');

@@ -24,6 +24,19 @@ export interface CandidateProvider {
   getCandidates(request: CandidateRequest): Promise<CandidateVideo[]>;
 }
 
+/**
+ * A provider that can execute a discovery plan (Phase 2+). Both the real
+ * YouTube provider and the fixture provider implement this, so development
+ * mode and live mode run the identical acquisition pipeline.
+ */
+export interface PlanCapableProvider extends CandidateProvider {
+  runPlan(
+    steps: AcquisitionStep[],
+    viewpointId: string | null,
+    now: string,
+  ): Promise<import('./youtube-web').AcquisitionRunResult>;
+}
+
 export interface CandidateRequest {
   /** Maximum number of candidates to return. */
   limit: number;

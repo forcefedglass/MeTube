@@ -9,8 +9,10 @@
 
 import { emptyUserProfile } from '../model/types';
 import type { FeedbackKind, UserFeedback, UserProfile } from '../model/types';
+import { PHASE4_FEEDBACK_KINDS, FEEDBACK_LABELS } from '../model/feedback';
 import { FixtureCandidateProvider } from '../discovery/fixture-provider';
 import { YouTubeWebProvider } from '../discovery/youtube-web';
+import type { PlanCapableProvider } from '../discovery/provider';
 import type { HtmlFetch } from '../discovery/youtube-web';
 import { assembleFeed } from '../discovery/assemble-feed';
 import {
@@ -41,6 +43,17 @@ import { enrichCandidates } from '../classification/enrich';
 import { loadOverrides, setOverride, clearOverride } from '../classification/overrides';
 import type { ClassificationOverride } from '../model/classification';
 import { computeCoverageMap } from '../discovery/coverage';
+import type { ExposureReport } from '../model/exposure';
+import type { GenerationHistoryEntry } from '../model/exposure';
+import { recordFeedbackThroughFirewall } from '../viewpoints/firewall';
+import type { FeedCandidate } from '../model/types';
+import {
+  findPerspectivePairs,
+  comparisonsForItem,
+} from '../viewpoints/pairing';
+import { computeBlindSpots } from '../viewpoints/blindspots';
+import { renderExposurePanel } from '../ui/exposure-panel';
+import { renderBlindSpotMap } from '../ui/blindspot-map';
 
 const store: LocalStore = openLocalStore();
 
@@ -92,14 +105,39 @@ function loadProfile(): Promise<UserProfile> {
   );
 }
 
-function recordFeedback(profile: UserProfile, videoId: string, kind: FeedbackKind): UserProfile {
-  const fb: UserFeedback = {
-    id: `fb-${nowIso()}-${Math.trunc(Math.random() * 1e6).toString(36)}`,
-    videoId,
-    kind,
-    capturedAt: nowIso(),
-  };
-  return { ...profile, feedback: [...profile.feedback, fb], updatedAt: nowIso() };
+/** Phase 4: generation history persistence for cooldown rules. */
+const GENERATION_HISTORY_KEY = 'generation-history';
+
+async function loadGenerationHistory(store: LocalStore): Promise<GenerationHistoryEntry[]> {
+  const value = await store.getKv(GENERATION_HISTORY_KEY);
+  if (!Array.isArray(value)) return [];
+  return value as GenerationHistoryEntry[];
+}
+
+async function saveGenerationEntry(store: LocalStore, entry: GenerationHistoryEntry): Promise<void> {
+  const history = await loadGenerationHistory(store);
+  // Bounded: keep the most recent 64 generations (enough for any cooldown).
+  const next = [...history, entry].slice(-64);
+  await store.putKv(GENERATION_HISTORY_KEY, next);
+}
+
+/** Human-readable one-line summary of the configured budget rules. */
+function summarizeExposureBudget(budget: import('../model/exposure').ExposureBudget): string {
+  const parts: string[] = [];
+  if (budget.maxSingleChannelShare !== undefined) parts.push(`≤${(budget.maxSingleChannelShare * 100).toFixed(0)}% from one channel`);
+  if (budget.maxSingleNarrativeShare !== undefined) parts.push(`≤${(budget.maxSingleNarrativeShare * 100).toFixed(0)}% from one narrative cluster`);
+  if (budget.maxSingleTopicShare !== undefined) parts.push(`≤${(budget.maxSingleTopicShare * 100).toFixed(0)}% on one topic`);
+  if (budget.minUnfamiliarChannelShare !== undefined) parts.push(`≥${(budget.minUnfamiliarChannelShare * 100).toFixed(0)}% unfamiliar channels`);
+  if (budget.minAlternateSourceTypeShare !== undefined) parts.push(`≥${(budget.minAlternateSourceTypeShare * 100).toFixed(0)}% alternate source types`);
+  if (budget.minHistoricalShare !== undefined) parts.push(`≥${(budget.minHistoricalShare * 100).toFixed(0)}% historical material`);
+  if (budget.explorationShare !== undefined) parts.push(`≥${(budget.explorationShare * 100).toFixed(0)}% wildcard/exploration`);
+  if (budget.repeatedChannelCooldown !== undefined) parts.push(`${budget.repeatedChannelCooldown}-generation channel cooldown`);
+  if (budget.repeatedNarrativeCooldown !== undefined) parts.push(`${budget.repeatedNarrativeCooldown}-generation narrative cooldown`);
+  if (budget.minDistinctLanguages !== undefined) parts.push(`≥${budget.minDistinctLanguages} language(s) (awaiting evidenced data)`);
+  if (budget.minDistinctRegions !== undefined) parts.push(`≥${budget.minDistinctRegions} region(s) (awaiting evidenced data)`);
+  if (budget.minDistinctScaleBands !== undefined) parts.push(`≥${budget.minDistinctScaleBands} scale band(s)`);
+  if (parts.length === 0) return 'no rules configured';
+  return parts.join(', ');
 }
 
 let feedVisible = false;
@@ -137,12 +175,16 @@ async function showFeed(): Promise<void> {
   let lookup: (videoId: string) => import('../model/classification').VideoClassification | undefined =
     () => undefined;
   let overrides: ClassificationOverride[] = [];
+  let exposureReport: ExposureReport | null = null;
+  let poolCandidates: import('../model/types').CandidateVideo[] = [];
+  let pairingResult: import('../viewpoints/pairing').PairingResult | null = null;
   if (active) {
-    // Viewstream: acquire (or serve from pool cache), then assemble through
-    // the active Viewpoint.
+    // Viewstream: acquire (or serve from pool cache), then compose through
+    // the active Viewpoint. Phase 4: composition runs under the
+    // Viewpoint's exposure budget with an honest per-rule report.
     const profile = await loadProfile();
     const pool = await loadPool(store);
-    const { state: nextPool } = await acquireForViewpoint(store, provider as YouTubeWebProvider, pool, {
+    const { state: nextPool } = await acquireForViewpoint(store, provider as PlanCapableProvider, pool, {
       viewpointId: active.id,
       seedTopics: active.config.seedTopics,
       seedConcepts: active.config.seedConcepts,
@@ -160,7 +202,37 @@ async function showFeed(): Promise<void> {
     const enriched = enrichCandidates(candidates, catalog, overrides, nowIso());
     lookup = classificationIndexFor(enriched);
     const feedCandidates = enriched.map(({ classification: _cls, ...c }) => c);
-    snapshot = await assembleViewstream(feedCandidates, { viewpoint: active, limit: 8, profile }, nowIso());
+    poolCandidates = feedCandidates;
+    // Phase 4: generation history for cooldowns (survives sessions).
+    const history = await loadGenerationHistory(store);
+    const nextGeneration = history.length > 0
+      ? Math.max(...history.map((h) => h.generation)) + 1
+      : 0;
+    const composed = await assembleViewstream(
+      feedCandidates,
+      { viewpoint: active, limit: 8, profile },
+      nowIso(),
+      { lookupClassification: lookup, history, generation: nextGeneration },
+    );
+    snapshot = composed.snapshot;
+    exposureReport = composed.report;
+    // Record the generation entry for cooldown arithmetic on the next run.
+    if (composed.snapshot.feed.length > 0) {
+      await saveGenerationEntry(store, {
+        generation: nextGeneration,
+        composedAt: nowIso(),
+        viewpointId: active.id,
+        channels: [...new Set(composed.snapshot.feed.map((f) => f.candidate.channelId))],
+        narrativeClusters: [
+          ...new Set(composed.snapshot.feed.flatMap((f) => f.candidate.narrativeClusterIds)),
+        ],
+      });
+    }
+    // Phase 4: perspective pairing over the composed feed (evidence-gated).
+    pairingResult = findPerspectivePairs(
+      composed.snapshot.feed.map((f) => f.candidate),
+      lookup,
+    );
     const banner = document.createElement('p');
     banner.className = 'metube-viewpoint-banner';
     banner.textContent = `Active Viewpoint: ${active.title} — this Viewstream was generated through it.`;
@@ -198,8 +270,17 @@ async function showFeed(): Promise<void> {
     list.append(
       renderFeedCard(item, {
         onFeedback: (videoId, kind) => {
+          // Phase 4 exploration firewall: feedback recorded inside a
+          // Viewstream is scoped to the active Viewpoint when the kind is
+          // a preference signal; exposure facts stay global.
           void loadProfile().then((current) => {
-            const next = recordFeedback(current, videoId, kind);
+            const next = recordFeedbackThroughFirewall(
+              current,
+              videoId,
+              kind,
+              active ? active.id : null,
+              nowIso(),
+            );
             return store.putKv('user-profile', next);
           });
         },
@@ -217,6 +298,14 @@ async function showFeed(): Promise<void> {
         onInspect: (clicked, card) => {
           void openInspector(clicked, card, lookup, overrides);
         },
+        // Phase 4: evidenced comparisons with other treatments of the
+        // same subject. Absent when no evidence supports a pairing.
+        onCompare: pairingResult
+          && comparisonsForItem(item, pairingResult, poolCandidates).length > 0
+          ? (card) => {
+              void openComparePanel(item, card, pairingResult, lookup, poolCandidates);
+            }
+          : undefined,
       }),
     );
   }
@@ -229,6 +318,49 @@ async function showFeed(): Promise<void> {
   manage.addEventListener('click', () => void showManager());
   mount.append(manage);
 
+  // Phase 4: explicit regeneration. Re-runs acquisition (bypassing the
+  // pool TTL) and composes a fresh Viewstream through the same budget.
+  // Cooldowns and exposure budgets apply honestly; repeated regeneration
+  // never Manufactures new diversity.
+  if (active) {
+    const regenerate = document.createElement('button');
+    regenerate.type = 'button';
+    regenerate.textContent = 'Regenerate Viewstream';
+    regenerate.addEventListener('click', () => void refreshAcquisition().then(() => showFeed()));
+    mount.append(regenerate);
+  }
+
+  // Phase 4: "Why this Viewstream looks like this" — exposure budget
+  // satisfaction and violations, fully visible, never hidden behind ML.
+  mount.append(
+    renderExposurePanel(
+      exposureReport,
+      active
+        ? `Budget: ${summarizeExposureBudget(active.config.exposureBudget ?? {})}`
+        : null,
+    ),
+  );
+
+  // Phase 4: coverage / blind-spot view for the active Viewpoint.
+  if (active) {
+    const blindSpots = computeBlindSpots(
+      poolCandidates,
+      snapshot.feed.map((f) => f.candidate),
+      lookup,
+      await loadProfile(),
+    );
+    mount.append(
+      renderBlindSpotMap(blindSpots, {
+        // User-initiated exploration from an underrepresented region:
+        // regenerate the feed seeded from that region. The region is a
+        // descriptive fact, not a recommendation to adopt a perspective.
+        onExplore: (spot) => {
+          void exploreFromRegion(active, spot);
+        },
+      }),
+    );
+  }
+
   // Phase 3: the coverage map lives on the feed — representation is
   // quantified every time the pool is inspected, never hidden.
   const coverage = computeCoverageMap(
@@ -238,6 +370,84 @@ async function showFeed(): Promise<void> {
     nowIso(),
   );
   mount.append(renderCoverageMap(coverage));
+}
+
+/**
+ * Phase 4: user-initiated exploration from an underrepresented region.
+ * Re-acquires candidates with the region's key as a seed concept for one
+ * run, then regenerates the feed. No automatic retraining happens.
+ */
+async function exploreFromRegion(
+  viewpoint: import('../model/viewpoint').Viewpoint,
+  spot: import('../viewpoints/blindspots').BlindSpot,
+): Promise<void> {
+  const seedLabel = spot.key.replace(/-/g, ' ');
+  await store.putKv('exploration-seed', {
+    viewpointId: viewpoint.id,
+    regionKey: spot.key,
+    regionLabel: spot.label,
+    seedLabel,
+    requestedAt: nowIso(),
+  });
+  await showFeed();
+}
+
+/**
+ * Phase 4: compare-treatments panel. Opens below the clicked card and
+ * lists evidenced same-subject different-position candidates with the
+ * basis for each pairing. Evidence-only: nothing is invented.
+ */
+async function openComparePanel(
+  item: FeedCandidate,
+  card: HTMLElement,
+  pairing: import('../viewpoints/pairing').PairingResult,
+  lookup: (videoId: string) => import('../model/classification').VideoClassification | undefined,
+  poolCandidates: import('../model/types').CandidateVideo[],
+): Promise<void> {
+  const existing = document.querySelector('.metube-compare');
+  if (existing) existing.remove();
+  const panel = document.createElement('div');
+  panel.className = 'metube-compare';
+  const heading = document.createElement('h4');
+  heading.textContent = 'Compare treatments (evidenced pairings only)';
+  panel.append(heading);
+  const comparisons = comparisonsForItem(item, pairing, poolCandidates);
+  if (comparisons.length === 0) {
+    const none = document.createElement('p');
+    none.textContent = 'No evidenced comparison exists for this item.';
+    panel.append(none);
+  }
+  const ul = document.createElement('ul');
+  for (const { other, basis } of comparisons) {
+    const li = document.createElement('li');
+    li.className = 'metube-compare-item';
+    const title = document.createElement('span');
+    title.textContent = other.title;
+    const meta = document.createElement('span');
+    meta.className = 'metube-compare-meta';
+    meta.textContent = ` — ${other.channelTitle}`;
+    const why = document.createElement('p');
+    why.className = 'metube-compare-basis';
+    why.textContent = `Evidence: ${basis}`;
+    const st = lookup(other.id);
+    if (st) {
+      const stp = document.createElement('p');
+      stp.className = 'metube-compare-classification';
+      stp.textContent = `Classified source type: ${st.sourceType.value} (${st.sourceType.method}).`;
+      li.append(stp);
+    }
+    li.prepend(title, meta);
+    li.append(why);
+    ul.append(li);
+  }
+  panel.append(ul);
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.textContent = 'Close';
+  close.addEventListener('click', () => panel.remove());
+  panel.append(close);
+  card.after(panel);
+  void lookup;
 }
 
 /** Lookup wrapper over enriched candidates (videoId -> classification). */
@@ -331,9 +541,8 @@ async function refreshAcquisition(): Promise<void> {
   const active = await repo.getActive();
   if (!active) return;
   const provider = await resolveProvider();
-  if (!(provider instanceof YouTubeWebProvider)) return;
   const pool = await loadPool(store);
-  await acquireForViewpoint(store, provider, pool, {
+  await acquireForViewpoint(store, provider as PlanCapableProvider, pool, {
     viewpointId: active.id,
     seedTopics: active.config.seedTopics,
     seedConcepts: active.config.seedConcepts,
@@ -364,13 +573,17 @@ function injectStyles(): void {
 }
 
 function bootstrap(): void {
+  injectStyles();
   const inserted = insertNavEntry(toggleFeed);
   if (inserted) {
     console.info('[MeTube] nav entry inserted');
   }
   // YouTube is a SPA; re-insert when navigation replaces the guide.
   const mo = new MutationObserver(() => {
-    if (!document.getElementById('metube-nav-entry')) {
+    if (
+      !document.getElementById('metube-nav-entry') &&
+      !document.getElementById('metube-floating-toggle')
+    ) {
       insertNavEntry(toggleFeed);
     }
   });

@@ -45,8 +45,74 @@ The lens applies before ranking:
 4. **Post-selection limits** (deterministic, greedy in rank order):
    `repetitionLimit` caps items per channel; `sourceConcentrationLimit`
    caps one channel's share of the feed.
-5. **Snapshot** embeds the Viewpoint ref. The feed header names the Active
+5. **Composition under exposure budgets** (Phase 4, deterministic,
+   `src/viewpoints/composer.ts`): when the Viewpoint carries an
+   `exposureBudget`, selection runs through the composer instead of the
+   greedy slice. Budget rules are ceilings and floors on shares of the
+   FINAL feed:
+   - ceilings: max share from one channel / one narrative cluster / one
+     topic;
+   - floors: min share from unfamiliar channels, alternate source types,
+     historical material, exploration wildcards;
+   - cooldowns: repeated-channel / repeated-narrative gaps in generations,
+     computed per-Viewpoint from persisted generation history;
+   - recorded-but-not-evaluable rules (distinct languages, regions,
+     channel-scale bands) report `not-applicable` — never satisfied by
+     guessing.
+   Selection order: reservation passes for floors → main walk gated by
+   ceilings + cooldowns → relief pass (soft rules never empty the feed
+   while hard-filter-passing candidates exist; the bypass is reported) →
+   trim pass enforcing ceilings against the actual feed size. Unknown
+   classifications never count toward diversity floors; degradation is
+   always reported per rule with an explanation ("Why this Viewstream
+   looks like this" panel). Diversity is never Manufactured by
+   misclassifying candidates.
+6. **Snapshot** embeds the Viewpoint ref. The feed header names the Active
    Viewpoint and restates its constraints.
+
+## Exposure budgets (Phase 4)
+
+All rules are optional; `{}` means no budget and the legacy assembly path
+applies. Every rule is visible and editable in the Viewpoint manager
+(never inferred, never hidden behind ML) and reported per rule on the
+feed. See `src/model/exposure.ts` for the full rule set.
+
+## Explicit feedback semantics (Phase 4)
+
+Twelve kinds with declared semantics (`src/model/feedback.ts`):
+
+- **Exposure facts** (global): watched, skipped, saved. "I watched this"
+  is never "I want more of this."
+- **Preference-positive** (Viewpoint-scoped): good-recommendation,
+  more-like-this, more-from-source, more-topic, more-narrative-region.
+- **Preference-negative** (Viewpoint-scoped): less-from-source, less-topic,
+  not-interested.
+- **Representation notes** (Viewpoint-scoped): interesting-no-extrapolate,
+  cluster-overrepresented.
+
+The exploration firewall (`src/viewpoints/firewall.ts`) lenses what each
+Viewpoint trains on: global exposure facts plus that Viewpoint's own
+scoped signals. Feedback inside one Viewpoint never trains unrelated
+Viewpoints; normal YouTube state is never mutated.
+
+## Perspective pairing (Phase 4)
+
+Where the evidence supports it, candidates addressing substantially the
+same subject (shared topics) from materially different positions (disjoint
+evidenced narrative clusters, or differing evidenced source types) are
+offered as "Compare treatments". Pairings are evidence-gated: unknown
+classifications never form a basis. There is no forced two-sided symmetry —
+one, two, three, or five meaningful clusters are all honest outcomes, and
+opposition is never invented for balance.
+
+## Coverage / blind spots (Phase 4)
+
+The blind-spot view (`src/viewpoints/blindspots.ts`) describes regions
+where the pool offers material the composed feed underrepresents, across
+topic / source type / narrative cluster / temporal position dimensions.
+Spots are descriptive facts with counts and samples — never judgments
+about which perspectives are correct or worth adopting. "Explore from
+here" is user-initiated.
 
 Interpretation is pure: same config + candidates + profile → same result.
 `explorationPercent`, `unfamiliarityTarget`, `narrativeDiversityTarget`,

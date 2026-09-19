@@ -108,6 +108,17 @@ shown verbatim on the feed, editable through the Viewpoint editor, and
 never influence filtering, ranking, or classification. Assumptions
 belong to the Viewpoint, never to a user identity.
 
+## Unknown classifications and diversity floors (Phase 4)
+
+The composer never counts UNKNOWN classifications toward diversity floors.
+A candidate with unknown source type never satisfies the alternate-source-
+type floor; a candidate with unknown temporal position never satisfies the
+historical floor. This is the anti-fabrication rule applied to exposure
+budgets: an honest "cannot satisfy this rule" (reported as violated with an
+explanation) always beats a Manufactured satisfaction. Unknown narrative
+clusters also never form a perspective-pairing basis — pairing requires
+evidenced positions on both sides.
+
 ## Layer placement
 
 Classification is a decision/pure layer: `src/model/classification.ts`

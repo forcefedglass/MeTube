@@ -13,7 +13,7 @@ YouTube's Home feed. "Don't predict what I want to believe. Help me see
 what I haven't seen." Exploration must not contaminate the user's normal
 YouTube recommendation profile.
 
-## State (2026-09-18, Phase 3 information map complete)
+## State (2026-09-18, Phase 4 Viewstream composer complete)
 
 ### VERIFIED
 
@@ -21,14 +21,22 @@ YouTube recommendation profile.
   npm config sets `omit=["dev"]`; plain `npm install` silently skips
   devDependencies — always install with `--include=dev`).
 - **Typecheck**: `npm run typecheck` (tsc --noEmit) passes clean.
-- **Tests**: `npm test` → 94/94 pass (bootstrap 6 + Phase 1 22 + Phase 2 31
-  + Phase 3 35: classification explainability/determinism, UNKNOWN over
-  invention, no political inference, override win + regeneration survival,
-  enrichment → filter path, coverage map counts, assumptions inertness).
-  yt-parser vs real captured fixtures, plan derivation, provider
-  transport, pool merge/prune/TTL, toCandidateVideo sentinels, unknown-date
-  window, temporal diversity exclusion, inspectPool, channel
-  normalization, channel-id resolution, unparseable-window tolerance.
+- **Tests**: `npm test` → 143/143 pass (bootstrap 6 + Phase 1 22 + Phase 2 31
+  + Phase 3 35 + Phase 4 49: composer budgets 25, feedback semantics +
+  firewall + pairing + blind spots 24). Phase 4 coverage: exposure
+  ceilings/floors on the final feed, honest per-rule violation reports,
+  cooldown scoping, relief pass (soft rules never empty the feed),
+  exploration wildcard pool bypass, feedback semantics taxonomy, exploration
+  firewall (per-Viewpoint scoping; 'watched' recorded per-Viewpoint but
+  stays an exposure fact), evidence-gated perspective pairing, descriptive
+  blind spots (no prescriptions). Prior phases: classification
+  explainability/determinism, UNKNOWN over invention, no political
+  inference, override win + regeneration survival, enrichment → filter
+  path, coverage map counts, assumptions inertness, yt-parser vs real
+  captured fixtures, plan derivation, provider transport, pool
+  merge/prune/TTL, toCandidateVideo sentinels, unknown-date window,
+  temporal diversity exclusion, inspectPool, channel normalization,
+  channel-id resolution, unparseable-window tolerance.
 - **Extension build**: `npm run build` produces `dist/content.js` (IIFE,
   esbuild) + `dist/manifest.json` (MV3). Manifest carries NO permissions;
   acquisition fetches are same-origin from the youtube.com content script
@@ -77,8 +85,108 @@ YouTube recommendation profile.
   refresh); the coverage map listed pool counts across all dimensions;
   Viewpoint assumptions display as a verbatim banner.
 
+- **Phase 4 browser verification** (headless Chromium, persistent context,
+  fresh profile, fixture provider mode via `use-fixture-provider` KV; script
+  `/tmp/e2e-phase4.mjs`, 16/16 checks): with the "Deliberate Exposure Mix"
+  demo Viewpoint active, the feed composed under a 6-rule exposure budget
+  and the "Why this Viewstream looks like this" panel reported every rule
+  with satisfied/violated status + explanation (3 satisfied, 3 honestly
+  violated with degradation reasons on the tiny fixture pool); blind-spot
+  map rendered (honest none-note when no region is underrepresented; no
+  prescriptive language in any spot description); "Compare treatments"
+  buttons appeared only where evidenced pairings exist; feedback buttons
+  split into exposure-fact vs preference groups; a preference signal
+  recorded through the firewall carried the active Viewpoint id;
+  generation history persisted for cooldown arithmetic; explicit
+  "Regenerate Viewstream" re-composed (with cooldowns honestly reported as
+  bypassed via the relief pass when soft rules would otherwise empty the
+  feed).
+
 ### IMPLEMENTED
 
+- **Viewstream composer** (`src/viewpoints/composer.ts`): Phase 4 core.
+  `composeViewstream(candidates, ComposerContext)` → `{snapshot, report}`.
+  Budget rules are ceilings/floors on shares of the FINAL composed feed
+  (not of the limit): select from a ranked pool via reservation passes for
+  floors (unfamiliar channels, alternate source types, historical material,
+  exploration wildcards — each through take() so counters stay consistent),
+  a main walk gated by ceilings + cooldowns, a relief pass (soft rules
+  never empty the feed while hard-filter-passing candidates exist; the
+  bypass is reported in the cooldown rule's explanation), and a final trim
+  pass enforcing ceilings against the ACTUAL feed size (never below 1
+  item). Deterministic. Honest degradation everywhere: a floor that cannot
+  be met within ceilings reports violated; unknown classifications never
+  count toward diversity floors; language/region rules report
+  not-applicable ("recorded and inspectable but cannot be evaluated;
+  never satisfied by guessing"). Exploration candidates bypass ONLY the
+  positive-topic pool filter (they exist precisely to admit out-of-topic
+  material; negative topics, source and unfamiliarity filters still
+  apply). `ExposureBudget` on ViewpointConfig; every rule user-editable
+  via the manager's budget fields; per-rule statuses shown on the feed.
+- **Exposure budgets** (`src/model/exposure.ts`): maxSingleChannelShare,
+  maxSingleNarrativeShare, maxSingleTopicShare, minUnfamiliarChannelShare,
+  minAlternateSourceTypeShare, minHistoricalShare, explorationShare,
+  repeatedChannelCooldown, repeatedNarrativeCooldown,
+  minDistinctLanguages, minDistinctRegions, minDistinctScaleBands
+  (all optional; {} = no budget rules → legacy assembly path).
+  GenerationHistoryEntry (generation, composedAt, viewpointId, channels,
+  narrativeClusters) persisted under KV `generation-history` (capped 64);
+  cooldowns are computed per-Viewpoint from that history.
+- **Feedback semantics** (`src/model/feedback.ts`): 12 explicit kinds —
+  exposure facts (watched, skipped, saved), preference-positive
+  (good-recommendation, more-like-this, more-from-source, more-topic,
+  more-narrative-region),
+  preference-negative (less-from-source, less-topic, not-interested),
+  representation-notes (interesting-no-extrapolate,
+  cluster-overrepresented). `FEEDBACK_SEMANTICS` declares each kind's
+  class; `countsAsFamiliar` (exposure facts + more-like-this); `isViewpointScoped`
+  (everything except saved/skipped — watched is recorded per-Viewpoint as
+  an audit trail but remains an exposure fact globally).
+- **Exploration firewall** (`src/viewpoints/firewall.ts`):
+  `feedbackVisibleTo(profile, viewpointId)`, `recordFeedbackThroughFirewall`,
+  `trainingFeedbackFor` (the lens a Viewpoint trains on: global exposure
+  facts + this Viewpoint's scoped signals). Feedback inside one Viewpoint
+  never trains unrelated Viewpoints; the unlensed bootstrap path and
+  normal YouTube stay untouched. `assembleViewstream` routes the LENSED
+  profile into both ranking and composition.
+- **Perspective pairing** (`src/viewpoints/pairing.ts`):
+  `findPerspectivePairs(candidates, lookup)` → pairs over the composed
+  feed where candidates share topic ids AND differ in narrative cluster
+  ids or source type (unknown classifications never form a pairing basis).
+  `buildComparisonGroups` = connected components (2..n members; 1 and 2+
+  clusters are both honest outcomes — no forced two-sided symmetry).
+  "Compare treatments" per card only when a pairing exists; the panel
+  shows each member + the evidential basis.
+- **Blind-spot view** (`src/viewpoints/blindspots.ts`):
+  `computeBlindSpots(pool, feed, lookup, profile)` → descriptive regions
+  where the pool offers material the feed underrepresents
+  (feedCount*2 < poolCount) across topic / source type / narrative cluster
+  / temporal position dimensions. Unknown regions are skipped (a fact, not
+  a gap to fill). Every spot carries counts + a sample of pool candidates
+  for user-initiated "Explore from here" (writes an exploration-seed KV
+  entry; acquisition integration is future work). Descriptions state
+  facts; they never prescribe adopting a perspective.
+- **Exposure panel UI** (`src/ui/exposure-panel.ts`): "Why this
+  Viewstream looks like this" — per-rule status, observed values,
+  explanations; honest violated/not-applicable states.
+- **Blind-spot map UI** (`src/ui/blindspot-map.ts`): descriptive spot
+  list + Explore-from-here buttons; honest none-note when fully covered.
+- **Feed-card feedback UI**: exposure-fact group (watched/skipped/saved)
+  kept visually and semantically separate from the preference group (all
+  12 kinds labeled).
+- **Floating toggle fallback** (`src/youtube/nav.ts`): when YouTube's
+  guide is absent (compact layouts, consent walls), a fixed-position
+  toggle button keeps MeTube reachable. Styles injected at bootstrap.
+- **Fixture provider plan support**: `FixtureCandidateProvider.runPlan`
+  implements the same plan-driven pipeline as the real provider (word-level
+  seed-search matching, honest empty steps) so development mode exercises
+  the full pipeline. `PlanCapableProvider` interface in
+  `src/discovery/provider.ts`; `acquireForViewpoint` accepts it (the hard
+  YouTubeWebProvider cast removed — found via live E2E crash).
+- **DEMO viewpoint**: "Deliberate Exposure Mix" seeds topics +
+  6 budget rules (channel ≤30%, narrative ≤40%, ≥25% unfamiliar,
+  ≥25% alternate source types, 15% exploration, channel cooldown 1) so
+  the composer is observable out of the box.
 - **Information-map model** (`src/model/classification.ts`): source-type
   taxonomy (official, publication, independent-creator,
   enthusiast-community, technical-analyst, academic-expert, primary-source,
@@ -229,6 +337,9 @@ YouTube recommendation profile.
   `channelSizePreferences`, `locale`, `narrativeDiversityTarget`,
   `explorationPercent`. They are recorded, inspectable, and editable; they
   bind to richer ranking in later phases. The feed states what it did.
+  (Phase 4 note: `exposureBudget` rules DO bind — in composition, not
+  ranking; `explorationPercent` binds at the pool-filter bypass only via
+  `explorationShare`.)
 - Political DEMO Viewpoints ("Counter A/B") demonstrate only the
   constraint mechanism over fixture topics/narratives. `baselineContext`
   is empty in DEMOs because a user baseline is user-authored by
@@ -241,7 +352,7 @@ YouTube recommendation profile.
 
 ### OPEN
 
-- docs/OPEN_QUESTIONS.md (23 items): citation-following semantics,
+- docs/OPEN_QUESTIONS.md (26 items): citation-following semantics,
   random-walk design, narrative clustering process, scale-band data
   source, weight tuning evidence, feed autopsy contents, familiarity
   definition, "more-like-this" semantics, storage origin (chrome.storage
@@ -249,7 +360,9 @@ YouTube recommendation profile.
   placement, onboarding, multi-profile, Phase 3 additions (classifier
   honesty vs. usefulness, cluster assignment at scale, temporal evidence
   beyond text framing, coverage visualization, assumption effects,
-  override discovery/bulk tools).
+  override discovery/bulk tools), Phase 4 additions (exploration-seed
+  acquisition integration, budget rule UX beyond prompt dialogs, richer
+  familiarity signals for floor qualification).
 - Viewpoint UX beyond prompts (real editor forms, per-field validation).
 - Viewlist-driven behaviors (cycling, comparison views) — none yet.
 - Explicit-video acquisition (accepted by the model, no page-fetch path).
@@ -262,6 +375,8 @@ YouTube recommendation profile.
   lexicons + provider passthrough by instruction; "narrative-AI" remains
   out of scope).
 - No feed autopsy view (snapshot data already recorded for it).
+- Exploration from a blind-spot region records the request but does not
+  yet drive acquisition (future work; OPEN question 24).
 - No coverage-map visualization (counts + plain lists only, per Phase 3
   scope).
 - No Firefox testing or manifest adjustments. Firefox compatibility has
@@ -327,6 +442,24 @@ YouTube recommendation profile.
 - 2026-09-18 (Phase 3): Coverage map ships as counts + plain lists, not a
   polished visualization (scope decision); coverage describes the pool,
   never judges it.
+- 2026-09-18 (Phase 4): Exposure budgets are share-of-FINAL-FEED rules
+  enforced in composition after ranking, never re-ranking weights —
+  visible, inspectable, user-editable. Honest degradation over
+  manufactured satisfaction: a rule that cannot be satisfied reports
+  violated with an explanation; unknown classifications never count toward
+  diversity floors; language/region rules report not-applicable rather
+  than guessing.
+- 2026-09-18 (Phase 4): Cooldowns are soft rules; floors may outrank them
+  via reservations, and a relief pass keeps the top-ranked candidate when
+  soft rules would otherwise empty the feed — the bypass is always
+  reported in the cooldown rule's explanation.
+- 2026-09-18 (Phase 4): Perspective pairing is evidence-gated (shared
+  topics + differing evidenced cluster or source type); no forced
+  two-sided symmetry — 1, 2, 3, 5 clusters are all honest outcomes.
+- 2026-09-18 (Phase 4): Feedback taxonomy is explicit and closed: exposure
+  facts never train preferences; 'watched' ≠ 'I want more like this'.
+  The exploration firewall lenses every Viewpoint's training input (global
+  exposure facts + own-Viewpoint signals only).
 
 ## Verification commands
 

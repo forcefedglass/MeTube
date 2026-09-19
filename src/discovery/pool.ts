@@ -26,7 +26,7 @@ import { deriveDiscoveryPlan } from '../model/discovery';
 import { UNKNOWN_DATE } from '../model/discovery';
 import type { LocalStore } from '../storage/local-store';
 import type { StepReport } from './youtube-web';
-import type { YouTubeWebProvider } from './youtube-web';
+import type { PlanCapableProvider } from './provider';
 import type { TopicLabelResolver } from '../model/discovery';
 
 const POOL_KEY = 'candidate-pool';
@@ -198,7 +198,7 @@ export interface AcquireOptions {
  */
 export async function acquireForViewpoint(
   store: LocalStore,
-  provider: YouTubeWebProvider,
+  provider: PlanCapableProvider,
   state: PoolState,
   options: AcquireOptions,
 ): Promise<{ state: PoolState; run?: PoolRunLogEntry; plan: DiscoveryPlan }> {

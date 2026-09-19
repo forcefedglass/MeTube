@@ -20,6 +20,7 @@ import type { ViewpointConfig, WeightOverride } from '../model/viewpoint';
 import type { RankWeights } from '../ranking/components';
 import { DEFAULT_WEIGHTS } from '../ranking/components';
 import { isUnknownDate } from '../model/discovery';
+import { countsAsFamiliar } from '../model/feedback';
 
 /** Hard constraints applied before ranking. */
 export interface ViewpointFilters {
@@ -158,8 +159,11 @@ export function isFamiliar(
   candidate: CandidateVideo,
   profile: UserProfile,
 ): boolean {
+  // Phase 4: familiarity is defined by the feedback-semantics module —
+  // exposure facts plus the legacy 'more-like-this' preference. It is
+  // never inferred from watching patterns.
   return profile.feedback.some(
-    (f) => f.videoId === candidate.id && (f.kind === 'watched' || f.kind === 'saved' || f.kind === 'more-like-this'),
+    (f) => f.videoId === candidate.id && countsAsFamiliar(f.kind),
   );
 }
 

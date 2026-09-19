@@ -30,6 +30,9 @@ import { isUnknownDate } from '../model/discovery';
 /** A classification lookup: videoId -> its classification (may be absent). */
 export type ClassificationLookup = (videoId: string) => VideoClassification | undefined;
 
+/** A lookup that resolves nothing: every dimension stays UNKNOWN. */
+export const unknownLookup: ClassificationLookup = () => undefined;
+
 /**
  * Count pool sightings per channel: how many distinct candidates each
  * channel contributes to the pool (including secondary sightings).

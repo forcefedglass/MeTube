@@ -245,6 +245,20 @@ const CONFIG_FIELDS: Array<{
   { key: 'sourceConcentrationLimit', label: 'Source-concentration limit (0–1)', kind: 'number' },
   { key: 'baselineContext', label: 'Your baseline/context (shown verbatim; never inferred)', kind: 'textarea' },
   { key: 'assumptions', label: 'Assumptions for this Viewpoint (comma-separated temporary premises, e.g. "my normal information environment generally favors X")', kind: 'text' },
+  // Phase 4 exposure budget rules. Every rule is user-settable here and
+  // reported per rule in the feed panel — never inferred, never hidden.
+  { key: 'budget.maxSingleChannelShare', label: 'EXPOSURE BUDGET — max share (0–1) of the feed from any single channel', kind: 'number' },
+  { key: 'budget.maxSingleNarrativeShare', label: 'EXPOSURE BUDGET — max share (0–1) of the feed from any single narrative cluster', kind: 'number' },
+  { key: 'budget.minUnfamiliarChannelShare', label: 'EXPOSURE BUDGET — min share (0–1) of the feed from channels unfamiliar to you', kind: 'number' },
+  { key: 'budget.minAlternateSourceTypeShare', label: 'EXPOSURE BUDGET — min share (0–1) from source types unlike the pool\'s dominant type', kind: 'number' },
+  { key: 'budget.minHistoricalShare', label: 'EXPOSURE BUDGET — min share (0–1) of historical material', kind: 'number' },
+  { key: 'budget.explorationShare', label: 'EXPOSURE BUDGET — min share (0–1) of wildcard/exploration material outside your topic constraints', kind: 'number' },
+  { key: 'budget.maxSingleTopicShare', label: 'EXPOSURE BUDGET — max share (0–1) of the feed on any single topic', kind: 'number' },
+  { key: 'budget.repeatedChannelCooldown', label: 'EXPOSURE BUDGET — channel cooldown (generations before a channel can repeat)', kind: 'number' },
+  { key: 'budget.repeatedNarrativeCooldown', label: 'EXPOSURE BUDGET — narrative-cluster cooldown (generations)', kind: 'number' },
+  { key: 'budget.minDistinctLanguages', label: 'EXPOSURE BUDGET — min distinct languages in the feed (recorded and reported; cannot be evaluated from available data)', kind: 'number' },
+  { key: 'budget.minDistinctRegions', label: 'EXPOSURE BUDGET — min distinct regions (recorded and reported; cannot be evaluated from available data)', kind: 'number' },
+  { key: 'budget.minDistinctScaleBands', label: 'EXPOSURE BUDGET — min distinct channel-scale bands (unknown-scale channels count as unknown)', kind: 'number' },
 ];
 
 type ConfigFieldKey =
@@ -255,7 +269,13 @@ type ConfigFieldKey =
   | 'temporalFrom' | 'temporalTo' | 'channelSizePreferences'
   | 'locale.language' | 'locale.region'
   | 'explorationPercent' | 'repetitionLimit' | 'sourceConcentrationLimit'
-  | 'baselineContext' | 'assumptions';
+  | 'baselineContext' | 'assumptions'
+  | 'budget.maxSingleChannelShare' | 'budget.maxSingleNarrativeShare'
+  | 'budget.minUnfamiliarChannelShare' | 'budget.minAlternateSourceTypeShare'
+  | 'budget.minHistoricalShare' | 'budget.explorationShare'
+  | 'budget.maxSingleTopicShare' | 'budget.repeatedChannelCooldown'
+  | 'budget.repeatedNarrativeCooldown' | 'budget.minDistinctLanguages'
+  | 'budget.minDistinctRegions' | 'budget.minDistinctScaleBands';
 
 function openEditor(
   repo: ViewpointRepository,
@@ -302,6 +322,12 @@ function currentFieldValue(vp: Viewpoint | undefined, key: ConfigFieldKey): stri
     const v = locale?.[sub];
     return v === undefined || v === null ? '' : String(v);
   }
+  if (key.startsWith('budget.')) {
+    const budgetKey = key.slice('budget.'.length);
+    const budget = vp.config.exposureBudget as unknown as Record<string, unknown> | undefined;
+    const v = budget?.[budgetKey];
+    return v === undefined || v === null ? '' : String(v);
+  }
   const v = (vp.config as unknown as Record<string, unknown>)[key as string];
   if (v === undefined || v === null) return '';
   if (Array.isArray(v)) return v.join(', ');
@@ -312,6 +338,29 @@ function currentFieldValue(vp: Viewpoint | undefined, key: ConfigFieldKey): stri
 function applyFieldValue(config: ViewpointConfig, key: ConfigFieldKey, raw: string): void {
   const trimmed = raw.trim();
   const target = config as unknown as Record<string, unknown>;
+  if (key.startsWith('budget.')) {
+    const budgetKey = key.slice('budget.'.length);
+    const budget = { ...(config.exposureBudget as unknown as Record<string, unknown>) };
+    if (trimmed === '') {
+      delete budget[budgetKey];
+    } else {
+      const n = Number(trimmed);
+      if (!Number.isFinite(n) || n < 0) {
+        delete budget[budgetKey]; // unparseable input clears the rule, never fabricates a value
+      } else {
+        const shareRules = new Set([
+          'maxSingleChannelShare', 'maxSingleNarrativeShare', 'minUnfamiliarChannelShare',
+          'minAlternateSourceTypeShare', 'minHistoricalShare', 'explorationShare',
+          'maxSingleTopicShare',
+        ]);
+        budget[budgetKey] = shareRules.has(budgetKey)
+          ? Math.min(1, Math.max(0, n))
+          : Math.trunc(n);
+      }
+    }
+    target['exposureBudget'] = budget;
+    return;
+  }
   if (key === 'explorationPercent') {
     const n = Number(trimmed);
     target[key] = Number.isFinite(n) ? Math.min(1, Math.max(0, n / 100)) : 0.15;

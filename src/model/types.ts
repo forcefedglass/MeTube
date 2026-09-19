@@ -101,19 +101,38 @@ export interface DiscoverySource {
 /**
  * Explicit user feedback only. The set is intentionally small and explicit:
  * the user said something, we recorded it. Nothing is inferred.
+ *
+ * Phase 4 semantics (see src/model/feedback.ts): 'watched'/'seen' record
+ * exposure and are NEVER preference signals; the 'more-*'/'less-*' kinds
+ * are the preference statements. Legacy kinds from bootstrap remain valid.
  */
 export type FeedbackKind =
   | 'watched'
   | 'skipped'
   | 'saved'
   | 'not-interested'
-  | 'more-like-this';
+  | 'more-like-this'
+  // Phase 4 additions:
+  | 'good-recommendation'
+  | 'interesting-no-extrapolate'
+  | 'more-from-source'
+  | 'less-from-source'
+  | 'more-topic'
+  | 'less-topic'
+  | 'more-narrative-region'
+  | 'cluster-overrepresented';
 
 export interface UserFeedback {
   id: FeedbackId;
   videoId: VideoId;
   kind: FeedbackKind;
   capturedAt: Iso8601;
+  /**
+   * When feedback was recorded through a Viewstream, the Viewpoint that
+   * was active (exploration firewall: preference feedback trains only its
+   * own Viewpoint; undefined = unlensed/global feedback).
+   */
+  viewpointId?: ViewpointId;
 }
 
 /** User profile built from explicit signals only. */

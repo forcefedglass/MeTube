@@ -10,6 +10,9 @@ Everything. MeTube keeps all state in the user's browser:
   same origin, under their own key (`classification-overrides`),
 - Viewpoint assumptions (user-authored premises) — stored with the
   Viewpoint in MeTube's own storage,
+- exposure budgets, generation history for cooldowns, and per-Viewpoint
+  feedback (exploration-firewall scope) — IndexedDB, same origin, under
+  their own keys,
 - fixture data — bundled with the extension.
 
 No backend. No accounts. The only network activity is the acquisition
@@ -104,6 +107,24 @@ particular:
   appearances + explicit feedback). It never reads YouTube watch history
   or subscriptions.
 - **User overrides stay local** and are never synchronized anywhere.
+
+## The composer (Phase 4) adds no network surface
+
+Exposure budgets, perspective pairing, blind-spot detection, and feedback
+semantics are all computed locally from already-acquired candidate data.
+The composer issues no fetches and sends nothing anywhere. In particular:
+
+- **The exploration firewall keeps Viewpoints independent.** Feedback
+  recorded inside one Viewpoint is scoped to that Viewpoint's training
+  lens; it never trains unrelated Viewpoints. Exposure facts ("I watched
+  this") are the only global signals, and they are never preference
+  signals.
+- **Normal YouTube state is never mutated.** MeTube records what the user
+  said inside its own storage; it does not touch YouTube's own watch
+  history, subscriptions, or recommendation profile.
+- **Blind spots are computed, never uploaded.** The coverage view
+  describes representation gaps in the local pool; nothing about the
+  user's interests leaves the machine.
 
 ## Telemetry
 

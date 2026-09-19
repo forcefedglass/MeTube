@@ -2,6 +2,90 @@
 
 All notable changes to MeTube. Dates are system dates.
 
+## 2026-09-18 — Phase 4: the Viewstream composer (v0.5.0)
+
+### Added
+
+- Viewstream composer (`src/viewpoints/composer.ts`): composition under
+  EXPOSURE BUDGETS — ceilings and floors on shares of the final composed
+  feed, enforced after ranking. Reservation passes for floors (unfamiliar
+  channels, alternate source types, historical material, exploration
+  wildcards), a main walk gated by ceilings and cooldowns, a relief pass
+  that keeps the top-ranked candidate when soft rules would otherwise
+  empty the feed (the bypass is reported in the cooldown explanation),
+  and a final trim pass enforcing ceilings against the actual feed size.
+  Deterministic; every rule's satisfaction is reported with an
+  explanation. The engine degrades honestly: a floor that cannot be met
+  within ceilings reports violated; unknown classifications never count
+  toward diversity floors; language/region diversity rules report
+  not-applicable ("never satisfied by guessing"). Diversity is never
+  Manufactured by misclassifying candidates.
+- Exposure-budget model (`src/model/exposure.ts`): 12 optional rules —
+  max single-channel/narrative/topic share, min unfamiliar-channel /
+  alternate-source-type / historical / exploration share, repeated
+  channel/narrative cooldowns (generations), min distinct
+  languages/regions/scale bands. All user-editable in the Viewpoint
+  manager; all reported per rule on the feed.
+- Explicit feedback semantics (`src/model/feedback.ts`): 12 kinds with
+  declared semantics — exposure facts (watched, skipped, saved) kept
+  strictly separate from preference signals (good-recommendation,
+  more-like-this, more/less-from-source, more/less-topic,
+  more-narrative-region, not-interested) and representation notes
+  (interesting-no-extrapolate, cluster-overrepresented). "I watched this"
+  never means "I want more of this."
+- Exploration firewall (`src/viewpoints/firewall.ts`): feedback is scoped
+  global vs per-Viewpoint. Feedback inside one Viewpoint never trains
+  unrelated Viewpoints; mutes and exposure facts stay global; normal
+  YouTube state is never mutated by MeTube.
+- Perspective pairing (`src/viewpoints/pairing.ts`): evidence-gated
+  "Compare treatments" — candidates addressing the same topics from
+  materially different evidenced positions (narrative cluster or source
+  type). No forced two-sided symmetry; 1, 2, 3, 5 meaningful clusters
+  are all honest outcomes; no invented opposition for balance.
+- Coverage / blind-spot view (`src/viewpoints/blindspots.ts` +
+  `src/ui/blindspot-map.ts`): descriptive underrepresented regions across
+  topic / source type / narrative cluster / temporal position dimensions,
+  with counts, samples, and user-initiated "Explore from here". Regions
+  are described factually — never framed as perspectives to adopt.
+- Exposure panel UI (`src/ui/exposure-panel.ts`): "Why this Viewstream
+  looks like this" — per-rule status, observed values, and explanations
+  for satisfied, violated, and not-applicable rules.
+- Generation history (KV `generation-history`, capped 64): per-Viewpoint
+  cooldown arithmetic that survives sessions.
+- "Regenerate Viewstream" control: explicit regeneration with honest
+  budget/cooldown reporting.
+- DEMO viewpoint "Deliberate Exposure Mix": composer observable out of the
+  box (channel ≤30%, narrative ≤40%, ≥25% unfamiliar, ≥25% alternate
+  source types, 15% exploration, channel cooldown 1).
+- Floating toggle fallback (`src/youtube/nav.ts`): MeTube stays reachable
+  when YouTube's guide is absent (compact layouts, consent walls).
+
+### Changed
+
+- Viewstream assembly routes the exploration-firewalled profile into
+  ranking and composition (was: raw profile — one Viewpoint's preference
+  feedback could train another's ranking).
+- `FixtureCandidateProvider` implements `runPlan` (same plan-driven
+  pipeline as the real provider, word-level search matching, honest empty
+  steps) so development mode exercises the full pipeline; new
+  `PlanCapableProvider` interface replaces the hard `YouTubeWebProvider`
+  cast in acquisition (found via live E2E crash).
+- Feed cards expose the full 12-kind feedback vocabulary, grouped
+  exposure facts vs preferences.
+
+### Verified
+
+- 143/143 tests pass (Phase 4 adds 49: composer budgets 25 + feedback /
+  firewall / pairing / blind spots 24, including the pathological cases —
+  one channel dominating the pool, one narrative dominating, insufficient
+  candidates for quotas, unknown classifications, conflicting constraints,
+  sparse historical material, muted sources, repeated regeneration, and
+  the relief pass pinning that soft rules never empty the feed).
+- Live-browser E2E 16/16: composer + per-rule exposure panel, blind-spot
+  map (descriptive only), evidence-gated pairing, feedback groups, firewall
+  scoping via storage inspection, generation history persistence,
+  regeneration with honest cooldown bypass reporting.
+
 ## 2026-09-18 — Phase 3: the information map (v0.4.0)
 
 ### Added

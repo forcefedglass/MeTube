@@ -4,7 +4,8 @@
  *   - "why this appeared" reason line
  *   - all 8 ranking components with values and weighted contributions
  *   - the discovery source that surfaced it
- *   - explicit feedback buttons (watched / skipped / saved / not interested / more like this)
+ *   - explicit feedback buttons (the full Phase 4 semantics: exposure
+ *     facts kept separate from preference signals)
  */
 
 import type { FeedCandidate } from '../model/types';
@@ -12,12 +13,19 @@ import { RANK_COMPONENT_LABELS } from '../model/types';
 import { RANK_COMPONENT_ORDER } from '../ranking/components';
 import { decidePlayback } from '../youtube/playback';
 import { buildIsolatedPlayer } from '../youtube/player-frame';
+import { PHASE4_FEEDBACK_KINDS, FEEDBACK_LABELS } from '../model/feedback';
 
 export interface CardCallbacks {
   onFeedback: (videoId: string, kind: import('../model/types').FeedbackKind) => void;
   onMuteChannel: (channelId: string) => void;
   /** Phase 3: clicking the card opens the candidate inspector. */
   onInspect?: (item: FeedCandidate, card: HTMLElement) => void;
+  /**
+   * Phase 4: "Compare treatments" — offered only when an evidenced
+   * same-subject different-position pairing exists for this item. The
+   * callback receives the card element; it opens the comparison panel.
+   */
+  onCompare?: (card: HTMLElement) => void;
 }
 
 export function renderFeedCard(
@@ -67,6 +75,21 @@ export function renderFeedCard(
       if (target.closest('button, a, iframe, .metube-card-player')) return;
       callbacks.onInspect?.(item, card);
     });
+  }
+
+  // Phase 4: "Compare treatments" is offered only when the caller has
+  // evidenced pairings for this item. No evidence -> no button; no
+  // forced symmetry.
+  if (callbacks.onCompare) {
+    const compare = document.createElement('button');
+    compare.type = 'button';
+    compare.className = 'metube-card-compare';
+    compare.textContent = 'Compare treatments';
+    compare.addEventListener('click', (event) => {
+      event.stopPropagation();
+      callbacks.onCompare?.(card);
+    });
+    card.append(compare);
   }
   return card;
 }
@@ -123,24 +146,42 @@ function renderFeedbackRow(
 ): HTMLElement {
   const row = document.createElement('div');
   row.className = 'metube-card-feedback';
-  const kinds: Array<{ kind: import('../model/types').FeedbackKind; label: string }> = [
-    { kind: 'watched', label: 'Watched' },
-    { kind: 'skipped', label: 'Skipped' },
-    { kind: 'saved', label: 'Save' },
-    { kind: 'not-interested', label: 'Not interested' },
-    { kind: 'more-like-this', label: 'More like this' },
-  ];
-  for (const { kind, label } of kinds) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.textContent = label;
-    btn.addEventListener('click', () => callbacks.onFeedback(item.candidate.id, kind));
-    row.append(btn);
+
+  // Phase 4: the full explicit feedback vocabulary. Exposure facts
+  // ("I watched this") stay separate from preference signals ("I want
+  // more of this") — semantics are declared in src/model/feedback.ts,
+  // not inferred here.
+  const exposure = document.createElement('div');
+  exposure.className = 'metube-feedback-group metube-feedback-exposure';
+  exposure.append(feedbackButton(item, 'watched', callbacks));
+  exposure.append(feedbackButton(item, 'skipped', callbacks));
+  exposure.append(feedbackButton(item, 'saved', callbacks));
+  row.append(exposure);
+
+  const preference = document.createElement('div');
+  preference.className = 'metube-feedback-group metube-feedback-preference';
+  for (const kind of PHASE4_FEEDBACK_KINDS) {
+    preference.append(feedbackButton(item, kind, callbacks));
   }
+  row.append(preference);
+
   const mute = document.createElement('button');
   mute.type = 'button';
+  mute.className = 'metube-feedback-mute';
   mute.textContent = `Mute channel (${item.candidate.channelTitle})`;
   mute.addEventListener('click', () => callbacks.onMuteChannel(item.candidate.channelId));
   row.append(mute);
   return row;
+}
+
+function feedbackButton(
+  item: FeedCandidate,
+  kind: import('../model/types').FeedbackKind,
+  callbacks: CardCallbacks,
+): HTMLButtonElement {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = FEEDBACK_LABELS[kind];
+  btn.addEventListener('click', () => callbacks.onFeedback(item.candidate.id, kind));
+  return btn;
 }

@@ -44,22 +44,50 @@ export function buildNavEntry(): HTMLElement {
   return item;
 }
 
+/** Id for the floating fallback toggle (used when no guide exists). */
+export const METUBE_FLOATING_ID = 'metube-floating-toggle';
+
 /**
- * Insert the MeTube entry. Returns the inserted element or null when the
- * guide is absent (YouTube layout changed, page not ready, etc.).
+ * Insert the MeTube entry. Returns the inserted element or null when no
+ * insertion point exists.
+ *
+ * Robustness: when YouTube's guide is absent (compact layouts, consent
+ * interstitials, markup drift), a small floating toggle is injected into
+ * the page instead. The feed stays reachable in every layout — the guide
+ * is preferred, never required.
  */
 export function insertNavEntry(onActivate: () => void): HTMLElement | null {
-  if (document.getElementById(METUBE_NAV_ID)) return null;
+  const existing = document.getElementById(METUBE_NAV_ID);
+  if (existing) return existing;
   const section = findGuideSection();
-  if (!section) return null;
-  const entry = buildNavEntry();
-  entry.addEventListener('click', (ev) => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    onActivate();
-  });
-  section.appendChild(entry);
-  return entry;
+  if (section) {
+    const entry = buildNavEntry();
+    entry.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      onActivate();
+    });
+    section.appendChild(entry);
+    return entry;
+  }
+  let floating = document.getElementById(METUBE_FLOATING_ID);
+  if (!floating) {
+    floating = document.createElement('button');
+    floating.id = METUBE_FLOATING_ID;
+    (floating as HTMLButtonElement).type = 'button';
+    floating.textContent = 'MeTube';
+    floating.title = 'MeTube — independent discovery feed';
+    document.body.appendChild(floating);
+  }
+  if (!floating.dataset.wired) {
+    floating.dataset.wired = '1';
+    floating.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      onActivate();
+    });
+  }
+  return floating;
 }
 
 /** Mount point for the feed UI. Sits over the page content area. */

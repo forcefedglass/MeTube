@@ -92,6 +92,12 @@ export const FEED_STYLES = `
   border-radius: 16px; padding: 4px 10px; font-size: 12px; cursor: pointer;
 }
 #metube-mount > button:hover { background: #3a4048; }
+#metube-floating-toggle {
+  position: fixed; left: 12px; bottom: 12px; z-index: 2200;
+  background: #1c1f24; color: #8ab4f8; border: 1px solid #3a4048;
+  border-radius: 18px; padding: 6px 14px; font-size: 13px; cursor: pointer;
+}
+#metube-floating-toggle:hover { border-color: #8ab4f8; }
 .metube-pool-inspector {
   background: #1c1f24; border: 1px solid #2a2f36; border-radius: 12px;
   padding: 12px; margin: 12px 0; display: grid; gap: 4px;
@@ -163,4 +169,93 @@ export const FEED_STYLES = `
 .metube-coverage-group h4 { margin: 0 0 4px; font-size: 13px; color: #9aa0a6; }
 .metube-coverage-list { list-style: none; margin: 0; padding: 0; font-size: 12px; }
 .metube-coverage-list li { padding: 2px 0; }
+
+/* --- Phase 4: exposure budgets, blind spots, pairing, feedback groups --- */
+.metube-exposure {
+  background: #1c1f24; border: 1px solid #2a2f36; border-radius: 12px;
+  padding: 12px; margin: 12px 0; display: grid; gap: 8px;
+}
+.metube-exposure h3 { margin: 0; font-size: 14px; }
+.metube-exposure-intro { margin: 0; font-size: 12px; color: #9aa0a6; }
+.metube-exposure-budget-summary {
+  margin: 0; font-size: 12px; color: #8ab4f8; font-family: ui-monospace, monospace;
+}
+.metube-exposure-rules { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.metube-exposure-rule {
+  border: 1px solid #2a2f36; border-radius: 8px; padding: 8px 10px;
+  display: grid; gap: 2px; background: #14161a;
+}
+.metube-exposure-rule-satisfied { border-color: #2f5d3a; }
+.metube-exposure-rule-violated { border-color: #6b3a3a; }
+.metube-exposure-rule-not-applicable { border-color: #3a3f46; opacity: 0.8; }
+.metube-exposure-rule p { margin: 0; font-size: 13px; color: #e8eaed; }
+.metube-exposure-status { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+.metube-exposure-rule-satisfied .metube-exposure-status { color: #81c995; }
+.metube-exposure-rule-violated .metube-exposure-status { color: #f28b82; }
+.metube-exposure-rule-not-applicable .metube-exposure-status { color: #9aa0a6; }
+.metube-exposure-observed {
+  margin: 0; font-size: 12px; color: #9aa0a6;
+  font-family: ui-monospace, monospace;
+}
+.metube-exposure-explanation { margin: 0; font-size: 12px; color: #9aa0a6; }
+.metube-exposure-none { margin: 0; font-size: 13px; color: #9aa0a6; }
+
+.metube-blindspots {
+  background: #1c1f24; border: 1px solid #2a2f36; border-radius: 12px;
+  padding: 12px; margin: 12px 0; display: grid; gap: 8px;
+}
+.metube-blindspots h3 { margin: 0; font-size: 14px; }
+.metube-blindspots-intro { margin: 0; font-size: 12px; color: #9aa0a6; }
+.metube-blindspots-none { margin: 0; font-size: 13px; color: #81c995; }
+.metube-blindspot-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.metube-blindspot {
+  border: 1px solid #3a4048; border-radius: 8px; padding: 8px 10px;
+  display: grid; gap: 4px; background: #14161a;
+}
+.metube-blindspot-counts {
+  margin: 0; font-size: 12px; color: #e8eaed;
+  font-family: ui-monospace, monospace;
+}
+.metube-blindspot-description { margin: 0; font-size: 12px; color: #9aa0a6; }
+.metube-blindspot-explore {
+  justify-self: start;
+  background: #2a2f36; color: #e8eaed; border: 1px solid #3a4048;
+  border-radius: 16px; padding: 3px 12px; font-size: 12px; cursor: pointer;
+}
+.metube-blindspot-explore:hover { border-color: #8ab4f8; }
+
+.metube-card-compare {
+  background: #1c1f24; border: 1px solid #2a2f36; border-radius: 8px;
+  padding: 6px 10px; font-size: 12px; color: #8ab4f8; cursor: pointer;
+  align-self: flex-start;
+}
+.metube-card-compare:hover { border-color: #8ab4f8; }
+.metube-compare {
+  background: #1c1f24; border: 1px solid #2a2f36; border-radius: 12px;
+  padding: 12px; margin: 12px 0; display: grid; gap: 10px;
+}
+.metube-compare h3 { margin: 0; font-size: 14px; }
+.metube-compare-meta { margin: 0; font-size: 12px; color: #9aa0a6; }
+.metube-compare-item {
+  border: 1px solid #2a2f36; border-radius: 8px; padding: 8px 10px;
+  display: grid; gap: 4px; background: #14161a;
+}
+.metube-compare-item p { margin: 0; font-size: 13px; color: #e8eaed; }
+.metube-compare-basis { margin: 0; font-size: 12px; color: #9aa0a6; }
+.metube-compare-classification {
+  margin: 0; font-size: 11px; color: #9aa0a6;
+  font-family: ui-monospace, monospace;
+}
+
+.metube-feedback-group {
+  display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+}
+.metube-feedback-group + .metube-feedback-group { margin-top: 4px; }
+.metube-feedback-exposure button,
+.metube-feedback-preference button {
+  background: #2a2f36; color: #e8eaed; border: 1px solid #3a4048;
+  border-radius: 14px; padding: 2px 10px; font-size: 11px; cursor: pointer;
+}
+.metube-feedback-exposure button:hover,
+.metube-feedback-preference button:hover { border-color: #8ab4f8; }
 `;

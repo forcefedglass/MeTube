@@ -25,10 +25,18 @@ classification / enrichment (six-dimension information map; UNKNOWN over
 invented certainty; overrides survive regeneration)
         │
         ▼
-MeTube ranking engine (explainable, additive, named components)
+MeTube ranking engine (explainable, additive, named components; lensed
+through the exploration firewall — each Viewpoint trains on its own signals
+plus global exposure facts only)
         │
         ▼
-Viewstream / MeTube feed (assembly, muting, snapshot persistence)
+Viewstream composition (Phase 4: exposure budgets — ceilings/floors on
+shares of the final feed; floors reserve, ceilings gate, cooldowns are
+soft; honest per-rule violation reports; never Manufactured diversity)
+        │
+        ▼
+Viewstream / MeTube feed (assembly, muting, snapshot persistence,
+evidence-gated perspective pairing, descriptive blind spots)
         │
         ▼
 isolated / private playback
@@ -58,7 +66,13 @@ YouTube's recommendation output never enters the pipeline at any stage.
 | `src/discovery/coverage.ts` | Coverage map computation: pool representation across the six dimensions, counts only. | model, classification |
 | `src/model/viewpoint.ts` | Viewpoint/Viewlist domain model (PROVISIONAL), including user-authored assumptions. Zero project deps beyond `model/types`. | model |
 | `src/viewpoints/interpret.ts` | Pure deterministic Viewpoint-config → filters/weights/limits interpretation. | model, ranking |
-| `src/viewpoints/viewstream.ts` | Viewstream generation: `generateViewstream` (provider-backed) and `assembleViewstream` (pool-backed). | viewpoints, discovery, ranking |
+| `src/viewpoints/viewstream.ts` | Viewstream generation: `generateViewstream` (provider-backed) and `assembleViewstream` (pool-backed); routes the firewalled profile into ranking and composition. | viewpoints, discovery, ranking |
+| `src/viewpoints/composer.ts` | Phase 4 composer: budget-gated selection over the ranked pool (reservations, ceilings, cooldowns, relief pass, trim), honest per-rule exposure report. Pure, deterministic. | viewpoints, model, ranking |
+| `src/model/exposure.ts` | Exposure-budget rule types + generation history; share-of-final-feed semantics. | model |
+| `src/model/feedback.ts` | Explicit feedback taxonomy: 12 kinds with declared semantics (exposure fact / preference / representation note), familiarity and scoping predicates. | model |
+| `src/viewpoints/firewall.ts` | Exploration firewall: feedback visibility per Viewpoint, firewall-scoped recording, per-Viewpoint training lens. | viewpoints, model |
+| `src/viewpoints/pairing.ts` | Evidence-gated perspective pairing over the composed feed (shared topics + differing evidenced positions). Pure. | viewpoints, model |
+| `src/viewpoints/blindspots.ts` | Descriptive coverage gaps: pool regions underrepresented in the feed. Pure. | viewpoints, model, classification |
 | `src/viewpoints/repository.ts` | Viewpoint/Viewlist CRUD, duplication, activation over LocalStore. | viewpoints, model, storage |
 | `src/viewpoints/demo.ts` | DEMO Viewpoints over fixtures; idempotent seeding. | viewpoints, model |
 | `src/ranking/components/*` | One pure function per named score component. | model |
@@ -72,6 +86,8 @@ YouTube's recommendation output never enters the pipeline at any stage.
 | `src/ui/pool-inspector.ts` | Read-only candidate-pool facts UI. | discovery |
 | `src/ui/candidate-inspector.ts` | Candidate inspector: why-this-appeared, all dimensions with audit trail, override controls. | model, classification |
 | `src/ui/coverage-map.ts` | Coverage map rendered as plain facts lists (visualization later). | model |
+| `src/ui/exposure-panel.ts` | "Why this Viewstream looks like this": per-rule budget status with explanations. | model |
+| `src/ui/blindspot-map.ts` | Descriptive blind-spot list + user-initiated exploration buttons. | viewpoints |
 | `src/ui/styles.ts` | Scoped styles for the feed overlay. | — |
 | `src/extension/content.ts` | Content-script orchestration entry; provider mode switch (real default, fixtures behind KV flag). | everything |
 
@@ -95,6 +111,20 @@ YouTube's recommendation output never enters the pipeline at any stage.
    `model/types.ts` and are marked provisional until the discovery graph is
    real. Renames are expected; downstream code must not hard-code
    assumptions about final shape.
+7. **Budgets compose after ranking.** Exposure-budget rules are enforced
+   in composition as share-of-final-feed ceilings/floors — never as
+   ranking weights that quietly reshape relevance. Every rule is visible,
+   editable, and reported per rule. Unknown classifications never count
+   toward diversity floors; degradation is reported, never padded.
+8. **Soft rules never empty the feed.** Cooldowns are soft: floors may
+   outrank them via reservations, and a relief pass keeps the top-ranked
+   candidate when soft rules would otherwise empty the feed; the bypass is
+   always reported in the rule's explanation.
+9. **Feedback is scoped.** The exploration firewall keeps Viewpoint
+   training inputs independent: one Viewpoint's preference feedback never
+   trains another Viewpoint, and normal YouTube state is never mutated.
+   Exposure facts stay global; "I watched this" never means "I want more
+   of this."
 
 ## Build
 

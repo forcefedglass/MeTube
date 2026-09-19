@@ -117,6 +117,23 @@ export function demoViewpoints(): Viewpoint[] {
         ],
       },
     ),
+    newViewpoint(
+      'vp-demo-deliberate-mix',
+      'Deliberate Exposure Mix (Phase 4 composer)',
+      `${DEMO_MARKER} — Phase 4 exposure-budget demo: no single channel above 30% of the feed, no single narrative cluster above 40%, at least 25% unfamiliar channels, at least 25% alternate source types, at least one exploration wildcard. Every rule is user-editable and reported per rule under the feed.`,
+      NOW,
+      {
+        seedTopics: ['topic-aero', 'topic-urban'],
+        exposureBudget: {
+          maxSingleChannelShare: 0.3,
+          maxSingleNarrativeShare: 0.4,
+          minUnfamiliarChannelShare: 0.25,
+          minAlternateSourceTypeShare: 0.25,
+          explorationShare: 0.15,
+          repeatedChannelCooldown: 1,
+        },
+      },
+    ),
   ];
 }
 

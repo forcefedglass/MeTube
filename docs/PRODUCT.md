@@ -70,6 +70,37 @@ generates a **Viewstream** — a feed assembled through that lens. A
   are shown verbatim, editable, and never influence ranking or
   classification. They document premises; they are not a hidden profile.
 
+## The Viewstream composer (Phase 4)
+
+A Viewstream is **composed**, not just ranked: when a Viewpoint carries an
+EXPOSURE BUDGET, selection enforces explicit ceilings and floors on shares
+of the final feed — max share from one channel or narrative cluster, min
+share from unfamiliar channels, alternate source types, historical and
+exploration material, per-Viewpoint cooldowns on repeated channels and
+clusters. Every rule is visible, editable, and reported per rule on the
+feed ("Why this Viewstream looks like this" — including honest violations
+when the pool cannot satisfy a rule). The engine degrades honestly: it
+never Manufactures diversity by misclassifying candidates, and unknown
+classifications never count toward diversity floors.
+
+**Feedback is explicit only, with declared semantics.** "I watched this"
+never means "I want more of this" — exposure facts, preference signals,
+and representation notes are recorded as distinct kinds. An exploration
+firewall keeps Viewpoints independent: feedback inside one Viewpoint never
+trains unrelated Viewpoints, and normal YouTube state is never mutated.
+
+**Perspective pairing is evidence-gated.** Where candidates address the
+same subject from materially different evidenced positions, MeTube offers
+"Compare treatments". There is no forced two-sided symmetry — there may be
+one, two, three, or five meaningful clusters, and opposition is never
+invented for balance.
+
+**Coverage and blind spots are descriptive.** The blind-spot view shows
+which regions the pool offers that the feed underrepresents, with counts
+and one-click exploration from any region. Underrepresented regions are
+facts about what the Viewstream surfaced — never statements about which
+perspectives are correct, superior, or worth adopting.
+
 ## The information map (Phase 3)
 
 Every candidate is classified across six inspectable dimensions — topics,

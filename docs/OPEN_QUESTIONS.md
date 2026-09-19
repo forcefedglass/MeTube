@@ -96,3 +96,21 @@ decided; the bootstrap avoids pre-empting any answer.
 23. **Override discovery:** overrides are per-video and per-dimension.
     Should bulk tools exist (e.g., override a channel's source type), and
     would that undermine per-video evidence discipline?
+## Composer (added Phase 4)
+
+24. **Exploration-seed acquisition:** "Explore from here" records the
+    request (region key + label) but does not yet drive acquisition.
+    Should the next run merge the region label into the Viewpoint's seed
+    concepts temporarily (one generation) or create a derived Viewpoint
+    so the exploration stays inspectable and reversible?
+25. **Budget rule UX:** exposure-budget rules are edited through prompt
+    dialogs like every other Viewpoint field. Does a per-rule editor with
+    inline satisfaction previews (e.g., "this pool can satisfy 4 of 6
+    rules") change how users set budgets — and does that preview risk
+    nudging users toward "gameable" budgets?
+26. **Familiarity signals for floors:** `minUnfamiliarChannelShare`
+    qualifies candidates by MeTube-only familiarity (pool sightings +
+    explicit feedback). Should channel subscriptions ever count as a
+    familiarity signal (they are user-declared, not behavior-inferred),
+    given the isolation thesis — and would counting them require reading
+    YouTube state that MeTube deliberately never reads?
