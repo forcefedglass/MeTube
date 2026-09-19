@@ -6,6 +6,10 @@ Everything. MeTube keeps all state in the user's browser:
 
 - feedback history and muted channels — IndexedDB on the youtube.com origin,
 - feed snapshots and the candidate pool — IndexedDB, same origin,
+- classification results and user classification overrides — IndexedDB,
+  same origin, under their own key (`classification-overrides`),
+- Viewpoint assumptions (user-authored premises) — stored with the
+  Viewpoint in MeTube's own storage,
 - fixture data — bundled with the extension.
 
 No backend. No accounts. The only network activity is the acquisition
@@ -82,6 +86,24 @@ normal YouTube recommendation profile.
 - Fixture videos are never playable; they run only in development/test mode
   (KV flag `use-fixture-provider`). Real candidates play through the
   isolated embed path above.
+
+## Classification (Phase 3) adds no network surface
+
+The entire information map — topics, source types, narrative clusters,
+temporal positions, channel familiarity, provenance edges, coverage maps —
+is computed locally from already-acquired candidate data. Classification
+issues no fetches, contacts no service, and sends nothing anywhere. In
+particular:
+
+- **No political inference.** Nothing in the classifier inspects viewing
+  behavior for ideology, party, or political identity. No such dimension
+  exists. Political labels appear only when the user authored them into
+  a Viewpoint or when describing an explicitly public organization/argument
+  — and then as source-type facts, never as scores.
+- **Channel familiarity counts only MeTube's own sightings** (pool
+  appearances + explicit feedback). It never reads YouTube watch history
+  or subscriptions.
+- **User overrides stay local** and are never synchronized anywhere.
 
 ## Telemetry
 

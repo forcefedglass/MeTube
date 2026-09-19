@@ -21,7 +21,8 @@ independent candidate acquisition (providers: youtube-web, fixtures)
 candidate pool (persistent, deduplicated, provenance-complete)
         │
         ▼
-metadata / topic / source analysis
+classification / enrichment (six-dimension information map; UNKNOWN over
+invented certainty; overrides survive regeneration)
         │
         ▼
 MeTube ranking engine (explainable, additive, named components)
@@ -50,7 +51,12 @@ YouTube's recommendation output never enters the pipeline at any stage.
 | `src/discovery/youtube-web.ts` | Real provider: plan-driven same-origin page fetches (injectable transport), bounded harvest, per-step reporting. | discovery, model |
 | `src/discovery/pool.ts` | Persistent candidate pool: dedup, provenance merge, TTL, prune, adapter to ranking candidates, inspection view. | discovery, storage, model |
 | `src/discovery/assemble-feed.ts` | Feed assembly: fetch, mute, rank, snapshot. | discovery, ranking |
-| `src/model/viewpoint.ts` | Viewpoint/Viewlist domain model (PROVISIONAL). Zero project deps beyond `model/types`. | model |
+| `src/model/classification.ts` | Information-map types: source-type taxonomy, temporal positions, `ClassifiedValue`, familiarity, provenance edges, coverage map. No politics. | model |
+| `src/classification/classify.ts` | Deterministic evidence-based classifier: lexicons + provider passthrough; conservative, UNKNOWN over invention. | model |
+| `src/classification/overrides.ts` | User overrides of machine classification; own KV key so they survive pool regeneration. | model, storage |
+| `src/classification/enrich.ts` | Enrichment bridge: classify pool candidates, apply overrides, inject topic/cluster ids into the ranking path. | classification, model |
+| `src/discovery/coverage.ts` | Coverage map computation: pool representation across the six dimensions, counts only. | model, classification |
+| `src/model/viewpoint.ts` | Viewpoint/Viewlist domain model (PROVISIONAL), including user-authored assumptions. Zero project deps beyond `model/types`. | model |
 | `src/viewpoints/interpret.ts` | Pure deterministic Viewpoint-config → filters/weights/limits interpretation. | model, ranking |
 | `src/viewpoints/viewstream.ts` | Viewstream generation: `generateViewstream` (provider-backed) and `assembleViewstream` (pool-backed). | viewpoints, discovery, ranking |
 | `src/viewpoints/repository.ts` | Viewpoint/Viewlist CRUD, duplication, activation over LocalStore. | viewpoints, model, storage |
@@ -61,9 +67,11 @@ YouTube's recommendation output never enters the pipeline at any stage.
 | `src/youtube/nav.ts` | DOM injection of the MeTube nav entry. | — |
 | `src/youtube/playback.ts` | Pure playback decisions + isolation constants. | — |
 | `src/youtube/player-frame.ts` | DOM construction of the isolated player. | youtube |
-| `src/ui/feed-card.ts` | Card rendering: reason, components, feedback. | model, ranking, youtube |
-| `src/ui/viewpoint-manager.ts` | Viewpoint/Viewlist management UI (plain DOM). | model, viewpoints |
+| `src/ui/feed-card.ts` | Card rendering: reason, components, feedback; click opens the candidate inspector. | model, ranking, youtube |
+| `src/ui/viewpoint-manager.ts` | Viewpoint/Viewlist management UI (plain DOM), incl. assumptions field. | model, viewpoints |
 | `src/ui/pool-inspector.ts` | Read-only candidate-pool facts UI. | discovery |
+| `src/ui/candidate-inspector.ts` | Candidate inspector: why-this-appeared, all dimensions with audit trail, override controls. | model, classification |
+| `src/ui/coverage-map.ts` | Coverage map rendered as plain facts lists (visualization later). | model |
 | `src/ui/styles.ts` | Scoped styles for the feed overlay. | — |
 | `src/extension/content.ts` | Content-script orchestration entry; provider mode switch (real default, fixtures behind KV flag). | everything |
 
@@ -79,7 +87,11 @@ YouTube's recommendation output never enters the pipeline at any stage.
    cannot be named and explained, it does not ship.
 4. **Explicit feedback only.** The profile records what the user said, not
    what they clicked or how long they watched.
-5. **Provisional types stay provisional.** Domain types live in
+5. **Classification is explainable or UNKNOWN.** Every machine-derived
+   classification carries value, confidence, origin/method, and evidence;
+   where evidence is absent the answer is UNKNOWN, never a guess. No
+   hidden political scoring anywhere. See `docs/CLASSIFICATION.md`.
+6. **Provisional types stay provisional.** Domain types live in
    `model/types.ts` and are marked provisional until the discovery graph is
    real. Renames are expected; downstream code must not hard-code
    assumptions about final shape.

@@ -65,6 +65,22 @@ generates a **Viewstream** — a feed assembled through that lens. A
   plainly that it is unlensed.
 - DEMO Viewpoints over the local fixtures ship enabled so the mechanism is
   observable without real acquisition.
+- A Viewpoint can carry **assumptions**: user-authored temporary premises
+  ("My normal information environment generally favors X."). Assumptions
+  are shown verbatim, editable, and never influence ranking or
+  classification. They document premises; they are not a hidden profile.
+
+## The information map (Phase 3)
+
+Every candidate is classified across six inspectable dimensions — topics,
+source type, narrative cluster, temporal position, channel familiarity,
+provenance — where every machine-derived value carries confidence, origin,
+method, and evidence, and where UNKNOWN is a real answer (see
+`CLASSIFICATION.md`). Clicking any feed card opens the candidate inspector:
+why this appeared, every dimension's audit trail, and override controls
+(the user always wins, and overrides survive pool regeneration). The
+coverage map quantifies pool representation across all dimensions as plain
+counts. There is deliberately no political scoring anywhere in the map.
 
 ## Diversity goals (ranked priorities)
 

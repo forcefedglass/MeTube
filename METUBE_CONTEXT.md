@@ -13,7 +13,7 @@ YouTube's Home feed. "Don't predict what I want to believe. Help me see
 what I haven't seen." Exploration must not contaminate the user's normal
 YouTube recommendation profile.
 
-## State (2026-09-18, Phase 2 real candidate acquisition complete)
+## State (2026-09-18, Phase 3 information map complete)
 
 ### VERIFIED
 
@@ -21,11 +21,14 @@ YouTube recommendation profile.
   npm config sets `omit=["dev"]`; plain `npm install` silently skips
   devDependencies — always install with `--include=dev`).
 - **Typecheck**: `npm run typecheck` (tsc --noEmit) passes clean.
-- **Tests**: `npm test` → 59/59 pass (bootstrap 6 + Phase 1 22 + Phase 2
-  31: yt-parser vs real captured fixtures, plan derivation, provider
+- **Tests**: `npm test` → 94/94 pass (bootstrap 6 + Phase 1 22 + Phase 2 31
+  + Phase 3 35: classification explainability/determinism, UNKNOWN over
+  invention, no political inference, override win + regeneration survival,
+  enrichment → filter path, coverage map counts, assumptions inertness).
+  yt-parser vs real captured fixtures, plan derivation, provider
   transport, pool merge/prune/TTL, toCandidateVideo sentinels, unknown-date
-  window, temporal diversity exclusion, inspectPool, channel normalization,
-  channel-id resolution, unparseable-window tolerance).
+  window, temporal diversity exclusion, inspectPool, channel
+  normalization, channel-id resolution, unparseable-window tolerance.
 - **Extension build**: `npm run build` produces `dist/content.js` (IIFE,
   esbuild) + `dist/manifest.json` (MV3). Manifest carries NO permissions;
   acquisition fetches are same-origin from the youtube.com content script
@@ -60,10 +63,68 @@ YouTube recommendation profile.
   (MemoryLocalStore fallback used in tests; IdbLocalStore exercised in
   browser verification). Viewpoints/Viewlists/candidate pool persist via
   the KV store (arrays under `viewpoints` / `viewlists` / `candidate-pool`
-  keys). No DB_VERSION bump.
+  keys). Classification overrides persist under their own
+  `classification-overrides` KV key (separate from the pool so they survive
+  pool regeneration and MAX_POOL_SIZE pruning). No DB_VERSION bump.
+- **Phase 3 browser verification** (headed Chromium via xvfb-run, fresh
+  profile; script `/tmp/verify-p3.mjs`): with "Aerospace Engineering (real
+  acquisition)" active, the feed rendered 8 cards with enrichment-derived
+  topic ids (filter pass now operates on real classification output);
+  clicking a card opened the candidate inspector showing why-this-appeared,
+  topics/source type/narrative cluster/temporal position with confidence +
+  origin + method + evidence, and working set/clear override controls; a
+  set override reappeared verbatim after pool regeneration (TTL force
+  refresh); the coverage map listed pool counts across all dimensions;
+  Viewpoint assumptions display as a verbatim banner.
 
 ### IMPLEMENTED
 
+- **Information-map model** (`src/model/classification.ts`): source-type
+  taxonomy (official, publication, independent-creator,
+  enthusiast-community, technical-analyst, academic-expert, primary-source,
+  promotional-sponsored-only-where-evidenced, unknown), temporal positions
+  (contemporary, historical, pre-event, post-event, retrospective,
+  unknown), `ClassifiedValue` (value + confidence + origin + method +
+  evidence), channel familiarity bands, provenance edge kinds, coverage-map
+  types. No political dimension exists anywhere in the model.
+- **Classifier** (`src/classification/classify.ts`): deterministic
+  evidence-based lexicons. Source type fires only on explicit markers
+  (channel-title or title/description text); sponsorship only where
+  disclosed in text. Temporal position from explicit framing only —
+  publication age NEVER establishes position relative to subject.
+  Narrative clusters: provider-carried ids only (resolved in catalog), NO
+  lexical fallback (would fabricate framing relationships). Topics:
+  provider pass-through (confidence 0.9) + one-per-candidate lexical
+  fallback (0.5). `buildProvenanceEdges`: evidenced edges only.
+- **Overrides** (`src/classification/overrides.ts`): per videoId+dimension;
+  own KV key `classification-overrides`; applied at read/enrich time so
+  they survive pool regeneration and pruning by design; user value always
+  wins with confidence 1 and origin `user-override`, note shown verbatim.
+- **Enrichment** (`src/classification/enrich.ts`): classifies pool
+  candidates, applies overrides, injects topicIds/narrativeClusterIds onto
+  candidates so Viewpoint filters + ranking operate on real classification
+  output; full audit trail kept on `classification` property;
+  catalog-resolving cluster ids only.
+- **Coverage map** (`src/discovery/coverage.ts`): pool counts per topic /
+  source type / narrative cluster / temporal position / age band (fixed
+  taxonomy incl. zero counts) / channel familiarity / channel, plus
+  unknown-date and unclassified totals. Counts describe, never judge.
+- **Candidate inspector UI** (`src/ui/candidate-inspector.ts`): opens on
+  feed-card click; shows why-this-appeared (reason + per-component
+  explanations), discovery provenance (primary + also-seen-via), every
+  dimension with value/confidence/origin/method/evidence verbatim, override
+  set/clear controls. One inspector open at a time.
+- **Coverage map UI** (`src/ui/coverage-map.ts`): plain fact lists on the
+  feed (deliberately not a polished visualization, per Phase 3 scope).
+- **Viewpoint assumptions**: `assumptions: string[]` on ViewpointConfig
+  (defaults []); free-text premises authored by the user, displayed
+  verbatim as a feed banner, editable via the manager field; never
+  influence filtering/ranking/classification.
+- **Phase 3 tests** (`tests/classification.test.ts`): 35 tests covering
+  explainability invariants, determinism, UNKNOWN-over-invention,
+  no-political-inference, override precedence + regeneration survival,
+  enrichment → Viewpoint filter path, coverage counting, assumptions
+  inertness.
 - **Discovery model** (`src/model/discovery.ts`): acquisition methods
   (seed-search, channel-uploads, explicit-video, playlist), discovery
   plans (MAX_PLAN_STEPS=6, MAX_PER_STEP=12), `CandidateProvenance`,
@@ -172,25 +233,37 @@ YouTube recommendation profile.
   constraint mechanism over fixture topics/narratives. `baselineContext`
   is empty in DEMOs because a user baseline is user-authored by
   definition. No political classification exists anywhere in MeTube.
+- Phase 3 classifier lexicons are deliberately small and conservative;
+  real-world UNKNOWN rates will be high (especially source type, where a
+  plain channel title evidences nothing). Raising evidenced coverage
+  (e.g., channel about pages as source-type evidence) is OPEN question 18.
+- Coverage map is counts only; no visualization (Phase 3 scope decision).
 
 ### OPEN
 
-- docs/OPEN_QUESTIONS.md (17 items): citation-following semantics,
+- docs/OPEN_QUESTIONS.md (23 items): citation-following semantics,
   random-walk design, narrative clustering process, scale-band data
   source, weight tuning evidence, feed autopsy contents, familiarity
   definition, "more-like-this" semantics, storage origin (chrome.storage
   vs page IndexedDB), playback isolation limits, Firefox compat, feed
-  placement, onboarding, multi-profile.
+  placement, onboarding, multi-profile, Phase 3 additions (classifier
+  honesty vs. usefulness, cluster assignment at scale, temporal evidence
+  beyond text framing, coverage visualization, assumption effects,
+  override discovery/bulk tools).
 - Viewpoint UX beyond prompts (real editor forms, per-field validation).
 - Viewlist-driven behaviors (cycling, comparison views) — none yet.
 - Explicit-video acquisition (accepted by the model, no page-fetch path).
-- Narrative-cluster assignment for real candidates (Phase 3; explicitly not
-  done here).
+- Narrative-cluster assignment for real candidates beyond
+  provider-carried ids and user overrides (OPEN question 19).
 
 ### Known gaps (intentionally unimplemented)
 
-- No narrative-AI classification (Phase 3 by instruction).
+- No narrative-AI classification (Phase 3 classifier is deterministic
+  lexicons + provider passthrough by instruction; "narrative-AI" remains
+  out of scope).
 - No feed autopsy view (snapshot data already recorded for it).
+- No coverage-map visualization (counts + plain lists only, per Phase 3
+  scope).
 - No Firefox testing or manifest adjustments. Firefox compatibility has
   NOT been verified and is not claimed.
 - No icons (extension loads without them).
@@ -237,6 +310,23 @@ YouTube recommendation profile.
   extension it activates only behind the explicit `use-fixture-provider`
   KV flag (development/test mode). Real acquisition is the default user
   experience.
+- 2026-09-18 (Phase 3): Every machine-derived classification is a
+  ClassifiedValue carrying value, confidence, origin/method, evidence;
+  UNKNOWN beats invented certainty (narrative clusters never inferred
+  from keywords; temporal position never from publication age; sponsorship
+  only where disclosed). No political scoring dimension exists — political
+  labels only as user-authored Viewpoint criteria or explicit
+  public-organization descriptions (FROZEN).
+- 2026-09-18 (Phase 3): User overrides stored under their own
+  `classification-overrides` KV key and applied at read/enrich time —
+  never written into the pool — so they survive pool regeneration and
+  MAX_POOL_SIZE pruning by construction.
+- 2026-09-18 (Phase 3): Viewpoint assumptions are display-only premises
+  (user-authored, verbatim, never influencing assembly); they belong to
+  the Viewpoint, never to a user identity.
+- 2026-09-18 (Phase 3): Coverage map ships as counts + plain lists, not a
+  polished visualization (scope decision); coverage describes the pool,
+  never judges it.
 
 ## Verification commands
 

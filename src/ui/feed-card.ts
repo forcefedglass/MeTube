@@ -16,6 +16,8 @@ import { buildIsolatedPlayer } from '../youtube/player-frame';
 export interface CardCallbacks {
   onFeedback: (videoId: string, kind: import('../model/types').FeedbackKind) => void;
   onMuteChannel: (channelId: string) => void;
+  /** Phase 3: clicking the card opens the candidate inspector. */
+  onInspect?: (item: FeedCandidate, card: HTMLElement) => void;
 }
 
 export function renderFeedCard(
@@ -55,6 +57,17 @@ export function renderFeedCard(
   card.append(playArea);
 
   card.append(renderFeedbackRow(item, callbacks));
+
+  if (callbacks.onInspect) {
+    card.classList.add('metube-card-inspectable');
+    card.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement;
+      // Buttons, links, and the player area keep their own behavior; the
+      // inspector opens only from plain card clicks.
+      if (target.closest('button, a, iframe, .metube-card-player')) return;
+      callbacks.onInspect?.(item, card);
+    });
+  }
   return card;
 }
 

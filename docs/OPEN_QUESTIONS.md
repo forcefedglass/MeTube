@@ -68,3 +68,31 @@ decided; the bootstrap avoids pre-empting any answer.
 17. **Multi-profile:** should MeTube support multiple exploration moods
     (e.g., "deep dive" vs. "survey") as separate profiles over the same
     graph?
+
+## Classification (added Phase 3)
+
+18. **Classifier honesty vs. usefulness:** the Phase 3 lexicons are
+    deliberately conservative (UNKNOWN beats invented certainty). At what
+    point does an UNKNOWN rate so high that the information map stops
+    being useful, and what evidenced signals (not guesses) could raise
+    classification coverage — e.g., channel-about pages as source-type
+    evidence?
+19. **Narrative cluster assignment at scale:** the classifier only
+    passes through provider-carried clusters (fixtures today). Who or what
+    assigns clusters to real candidates? Manual curation, user override
+    first, community definition lists? How does the catalog grow beyond
+    fixtures?
+20. **Temporal position evidence:** text framing is the only current
+    evidence. Should other establishable evidence count (e.g., explicit
+    event dates in descriptions), and what would let a *pre-event* claim
+    be verified after the fact rather than trusted?
+21. **Coverage map visualization:** Phase 3 ships counts as plain lists.
+    What visualization (if any) communicates representation without
+    implying judgment — and how are UNKNOWN shares best shown?
+22. **Assumption effects:** Viewpoint assumptions are display-only
+    premises today. Should they ever influence anything (e.g., a
+    reminder banner when pool coverage contradicts a stated premise), and
+    if so, how is that kept explicit rather than silent scoring?
+23. **Override discovery:** overrides are per-video and per-dimension.
+    Should bulk tools exist (e.g., override a channel's source type), and
+    would that undermine per-video evidence discipline?

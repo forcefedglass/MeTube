@@ -109,4 +109,58 @@ export const FEED_STYLES = `
   justify-self: start; margin-top: 8px;
 }
 .metube-pool-inspector > button:hover { background: #3a4048; }
+.metube-card-inspectable { cursor: pointer; }
+.metube-card-inspectable:hover { border-color: #8ab4f8; }
+.metube-inspector {
+  background: #14161a; border: 1px solid #8ab4f8; border-radius: 12px;
+  padding: 12px; margin: 12px 0; display: grid; gap: 10px;
+}
+.metube-inspector-header { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.metube-inspector-header h3 { margin: 0; font-size: 15px; flex: 1 1 auto; }
+.metube-inspector-header button {
+  background: #2a2f36; color: #e8eaed; border: 1px solid #3a4048;
+  border-radius: 16px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+}
+.metube-inspector-why h4, .metube-inspector-provenance h4,
+.metube-inspector-dimension h4 {
+  margin: 0; font-size: 12px; color: #8ab4f8; text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.metube-inspector-why p, .metube-inspector-provenance p,
+.metube-inspector-dimension > p {
+  margin: 4px 0 0; font-size: 13px;
+}
+.metube-inspector-audit { color: #9aa0a6; font-size: 12px; }
+.metube-inspector-unknown { color: #fdd663; }
+.metube-inspector-dimension {
+  border-top: 1px solid #2a2f36; padding-top: 8px; display: grid; gap: 4px;
+}
+.metube-inspector-override {
+  background: #1c1f24; border: 1px solid #2a2f36; border-radius: 8px;
+  padding: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.metube-inspector-override p { margin: 0; font-size: 12px; color: #9aa0a6; flex: 1 1 auto; }
+.metube-inspector-override button {
+  background: #2a2f36; color: #e8eaed; border: 1px solid #3a4048;
+  border-radius: 16px; padding: 3px 10px; font-size: 12px; cursor: pointer;
+}
+.metube-assumptions {
+  background: #14161a; border: 1px solid #2a2f36; border-radius: 12px;
+  padding: 10px 12px; margin: 10px 0;
+}
+.metube-assumptions h4 {
+  margin: 0 0 4px; font-size: 12px; color: #8ab4f8;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.metube-assumptions ul { margin: 0; padding-left: 18px; font-size: 13px; color: #e8eaed; }
+.metube-coverage {
+  background: #1c1f24; border: 1px solid #2a2f36; border-radius: 12px;
+  padding: 12px; margin: 12px 0; display: grid; gap: 8px;
+}
+.metube-coverage h3 { margin: 0; font-size: 14px; }
+.metube-coverage-intro { margin: 0; font-size: 12px; color: #9aa0a6; }
+.metube-coverage-group { border-top: 1px solid #2a2f36; padding-top: 8px; }
+.metube-coverage-group h4 { margin: 0 0 4px; font-size: 13px; color: #9aa0a6; }
+.metube-coverage-list { list-style: none; margin: 0; padding: 0; font-size: 12px; }
+.metube-coverage-list li { padding: 2px 0; }
 `;

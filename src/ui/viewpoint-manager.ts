@@ -244,6 +244,7 @@ const CONFIG_FIELDS: Array<{
   { key: 'repetitionLimit', label: 'Repetition limit (max items per channel)', kind: 'number' },
   { key: 'sourceConcentrationLimit', label: 'Source-concentration limit (0–1)', kind: 'number' },
   { key: 'baselineContext', label: 'Your baseline/context (shown verbatim; never inferred)', kind: 'textarea' },
+  { key: 'assumptions', label: 'Assumptions for this Viewpoint (comma-separated temporary premises, e.g. "my normal information environment generally favors X")', kind: 'text' },
 ];
 
 type ConfigFieldKey =
@@ -254,7 +255,7 @@ type ConfigFieldKey =
   | 'temporalFrom' | 'temporalTo' | 'channelSizePreferences'
   | 'locale.language' | 'locale.region'
   | 'explorationPercent' | 'repetitionLimit' | 'sourceConcentrationLimit'
-  | 'baselineContext';
+  | 'baselineContext' | 'assumptions';
 
 function openEditor(
   repo: ViewpointRepository,
@@ -345,7 +346,7 @@ function applyFieldValue(config: ViewpointConfig, key: ConfigFieldKey, raw: stri
     key === 'seedChannels' || key === 'seedPlaylists' ||
     key === 'positiveTopicConstraints' || key === 'negativeTopicConstraints' ||
     key === 'sourceConstraints' || key === 'sourceTypePreferences' ||
-    key === 'channelSizePreferences'
+    key === 'channelSizePreferences' || key === 'assumptions'
   ) {
     target[key] = trimmed === '' ? [] : trimmed.split(',').map((s) => s.trim()).filter(Boolean);
     return;

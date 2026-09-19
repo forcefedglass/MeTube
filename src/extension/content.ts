@@ -31,7 +31,16 @@ import { seedDemoViewpoints } from '../viewpoints/demo';
 import { summarizeViewpoint } from '../model/viewpoint';
 import { renderViewpointManager } from '../ui/viewpoint-manager';
 import { renderPoolInspector } from '../ui/pool-inspector';
+import { renderCandidateInspector } from '../ui/candidate-inspector';
+import { renderCoverageMap } from '../ui/coverage-map';
 import { FIXTURE_TOPICS } from '../discovery/fixtures';
+import { FIXTURE_CHANNELS } from '../discovery/fixtures';
+import { FIXTURE_NARRATIVE_CLUSTERS } from '../discovery/fixtures';
+import { buildCatalog } from '../model/catalog';
+import { enrichCandidates } from '../classification/enrich';
+import { loadOverrides, setOverride, clearOverride } from '../classification/overrides';
+import type { ClassificationOverride } from '../model/classification';
+import { computeCoverageMap } from '../discovery/coverage';
 
 const store: LocalStore = openLocalStore();
 
@@ -61,6 +70,20 @@ function makeTopicLabelResolver(): import('../model/discovery').TopicLabelResolv
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+/**
+ * The working catalog for classification: fixture topic/cluster/channel
+ * definitions. Real candidates classify against these definitions; ids that
+ * do not resolve stay UNKNOWN rather than resolving to invented entries.
+ */
+function workingCatalog(): import('../model/catalog').Catalog {
+  return buildCatalog({
+    topics: FIXTURE_TOPICS,
+    channels: FIXTURE_CHANNELS,
+    narrativeClusters: FIXTURE_NARRATIVE_CLUSTERS,
+    discoverySources: [],
+  });
 }
 
 function loadProfile(): Promise<UserProfile> {
@@ -111,6 +134,9 @@ async function showFeed(): Promise<void> {
   const provider = await resolveProvider();
 
   let snapshot: import('../model/types').FeedSnapshot;
+  let lookup: (videoId: string) => import('../model/classification').VideoClassification | undefined =
+    () => undefined;
+  let overrides: ClassificationOverride[] = [];
   if (active) {
     // Viewstream: acquire (or serve from pool cache), then assemble through
     // the active Viewpoint.
@@ -126,7 +152,15 @@ async function showFeed(): Promise<void> {
       now: nowIso(),
     });
     const candidates = nextPool.entries.map(toCandidateVideo);
-    snapshot = await assembleViewstream(candidates, { viewpoint: active, limit: 8, profile }, nowIso());
+    // Phase 3: classify + override -> enrichment. Topic and narrative
+    // cluster ids become real, Viewpoint filters and ranking start working
+    // on real candidates, and every classification carries its audit trail.
+    overrides = await loadOverrides(store);
+    const catalog = workingCatalog();
+    const enriched = enrichCandidates(candidates, catalog, overrides, nowIso());
+    lookup = classificationIndexFor(enriched);
+    const feedCandidates = enriched.map(({ classification: _cls, ...c }) => c);
+    snapshot = await assembleViewstream(feedCandidates, { viewpoint: active, limit: 8, profile }, nowIso());
     const banner = document.createElement('p');
     banner.className = 'metube-viewpoint-banner';
     banner.textContent = `Active Viewpoint: ${active.title} — this Viewstream was generated through it.`;
@@ -135,6 +169,21 @@ async function showFeed(): Promise<void> {
     summary.className = 'metube-viewpoint-summary';
     summary.textContent = `Constraints: ${summarizeViewpoint(active)}`;
     mount.append(summary);
+    if (active.config.assumptions.length > 0) {
+      const assumptions = document.createElement('div');
+      assumptions.className = 'metube-assumptions';
+      const h4 = document.createElement('h4');
+      h4.textContent = 'Assumptions for this Viewpoint (authored by you; never inferred)';
+      assumptions.append(h4);
+      const ul = document.createElement('ul');
+      for (const a of active.config.assumptions) {
+        const li = document.createElement('li');
+        li.textContent = a;
+        ul.append(li);
+      }
+      assumptions.append(ul);
+      mount.append(assumptions);
+    }
   } else {
     const note = document.createElement('p');
     note.textContent = 'Unlensed bootstrap feed: local fixtures only. Every score component is shown per card. Activate a Viewpoint to generate a Viewstream.';
@@ -164,6 +213,10 @@ async function showFeed(): Promise<void> {
             return store.putKv('user-profile', next);
           });
         },
+        // Phase 3: clicking a card opens the information-map inspector.
+        onInspect: (clicked, card) => {
+          void openInspector(clicked, card, lookup, overrides);
+        },
       }),
     );
   }
@@ -175,6 +228,62 @@ async function showFeed(): Promise<void> {
   manage.textContent = 'Manage Viewpoints';
   manage.addEventListener('click', () => void showManager());
   mount.append(manage);
+
+  // Phase 3: the coverage map lives on the feed — representation is
+  // quantified every time the pool is inspected, never hidden.
+  const coverage = computeCoverageMap(
+    snapshot.feed.map((f) => f.candidate),
+    lookup,
+    await loadProfile(),
+    nowIso(),
+  );
+  mount.append(renderCoverageMap(coverage));
+}
+
+/** Lookup wrapper over enriched candidates (videoId -> classification). */
+function classificationIndexFor(
+  enriched: import('../classification/enrich').EnrichedCandidate[],
+): (videoId: string) => import('../model/classification').VideoClassification | undefined {
+  const index = new Map(enriched.map((c) => [c.id, c.classification]));
+  return (videoId) => index.get(videoId);
+}
+
+/**
+ * Open the candidate inspector below the clicked card. One inspector is
+ * open at a time; overrides persist through the store (surviving pool
+ * regeneration by design).
+ */
+async function openInspector(
+  item: import('../model/types').FeedCandidate,
+  card: HTMLElement,
+  lookup: (videoId: string) => import('../model/classification').VideoClassification | undefined,
+  initialOverrides: ClassificationOverride[],
+): Promise<void> {
+  const existing = document.querySelector('.metube-inspector');
+  if (existing) existing.remove();
+  const overrides = await loadOverrides(store);
+  const classification = lookup(item.candidate.id);
+  const panel = renderCandidateInspector(item, classification, overrides, {
+    onSetOverride: (videoId, dimension, value, note) => {
+      void setOverride(store, {
+        videoId,
+        dimension,
+        value,
+        setAt: nowIso(),
+        note,
+      }).then(() => openInspector(item, card, lookup, overrides));
+    },
+    onClearOverride: (videoId, dimension) => {
+      void clearOverride(store, videoId, dimension).then(() =>
+        openInspector(item, card, lookup, overrides),
+      );
+    },
+    onClose: () => {
+      panel.remove();
+    },
+  });
+  card.after(panel);
+  void initialOverrides;
 }
 
 async function showManager(): Promise<void> {

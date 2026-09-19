@@ -122,6 +122,16 @@ export interface ViewpointConfig {
   weightOverrides: WeightOverride[];
   /** User-written baseline/context, shown and editable verbatim. */
   baselineContext: string;
+  /**
+   * User-authored temporary premises for this Viewpoint (Phase 3).
+   * Examples: "My normal information environment generally favors X.",
+   * "I already see substantial coverage from Y.",
+   * "For this Viewpoint I want to understand arguments associated with Z."
+   * Assumptions belong to the Viewpoint, never to the user's identity;
+   * they are shown and edited verbatim and never influence anything
+   * silently.
+   */
+  assumptions: string[];
 }
 
 export interface Viewpoint {
@@ -170,6 +180,7 @@ export function defaultViewpointConfig(): ViewpointConfig {
     sourceConcentrationLimit: 0.5,
     weightOverrides: [],
     baselineContext: '',
+    assumptions: [],
   };
 }
 
@@ -243,6 +254,9 @@ export function summarizeViewpoint(vp: Viewpoint): string {
   }
   if (vp.config.channelSizePreferences.length > 0) {
     parts.push(`channel size: ${vp.config.channelSizePreferences.join(' | ')}`);
+  }
+  if (vp.config.assumptions.length > 0) {
+    parts.push(`${vp.config.assumptions.length} assumption(s), shown below`);
   }
   if (parts.length === 0) return 'no constraints';
   return parts.join(' · ');

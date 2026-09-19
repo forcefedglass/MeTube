@@ -2,6 +2,75 @@
 
 All notable changes to MeTube. Dates are system dates.
 
+## 2026-09-18 — Phase 3: the information map (v0.4.0)
+
+### Added
+
+- Information-map model (`src/model/classification.ts`): six-dimension
+  classification types — source-type taxonomy (official, publication,
+  independent-creator, enthusiast-community, technical-analyst,
+  academic-expert, primary-source, promotional-sponsored only where
+  evidenced, unknown), temporal positions (contemporary, historical,
+  pre-event, post-event, retrospective, unknown), `ClassifiedValue`
+  carrying value + confidence + origin/method + evidence on every
+  machine-derived classification, channel-familiarity bands derived from
+  countable MeTube-only facts, evidenced-only provenance edge kinds, and
+  CoverageMap data types. No political dimension exists anywhere in the
+  model.
+- Classifier (`src/classification/classify.ts`): deterministic,
+  conservative, evidence-based. Source type fires only on explicit text
+  markers; sponsorship only where disclosed in the text. Temporal
+  position classified from explicit framing only — publication age never
+  establishes a video's relation to its subject. Narrative clusters pass
+  through provider-carried ids (resolved in the catalog) with no lexical
+  fallback — clusters are never inferred from keywords. Topics pass through
+  provider ids plus a one-per-candidate lexical fallback.
+  `buildProvenanceEdges` emits only relationships evidenced in candidate
+  data.
+- Classification overrides (`src/classification/overrides.ts`): users
+  override any dimension of any video; overrides live under their own
+  `classification-overrides` KV key and are applied at read/enrich time,
+  so they survive pool regeneration and MAX_POOL_SIZE pruning by
+  construction; user values always win (confidence 1, origin
+  `user-override`, note shown verbatim).
+- Enrichment bridge (`src/classification/enrich.ts`): classifies pool
+  candidates, applies overrides, and injects topicIds/narrativeClusterIds
+  onto real candidates so Viewpoint hard filters and ranking finally
+  operate on real classification output; full audit trail kept alongside
+  each candidate.
+- Coverage map (`src/discovery/coverage.ts` + `src/ui/coverage-map.ts`):
+  pool representation quantified as plain counts across topics, source
+  types, narrative clusters, temporal positions, age bands (fixed
+  taxonomy, zero counts included), channel familiarity, and channels;
+  rendered as fact lists. Data model first; the polished visualization is
+  deliberately deferred.
+- Candidate inspector (`src/ui/candidate-inspector.ts`): clicking any
+  feed card opens the information map for that candidate — why this
+  appeared (reason + per-component explanations), discovery provenance,
+  every dimension with value/confidence/origin/method/evidence verbatim,
+  and set/clear override controls.
+- Viewpoint assumptions: user-authored temporary premises
+  (`assumptions: string[]` on the config) displayed verbatim on the feed
+  and editable through the manager; they never influence filtering,
+  ranking, or classification, and belong to the Viewpoint, never to a
+  user identity.
+- Phase 3 tests (`tests/classification.test.ts`): 35 tests enforcing
+  classification explainability, determinism, UNKNOWN-over-invented-
+  certainty, no-political-inference, override precedence and regeneration
+  survival, enrichment reaching the Viewpoint filter path, coverage-map
+  counting, and assumption inertness.
+- Documentation: new `docs/CLASSIFICATION.md`; ARCHITECTURE layer table
+  and rules, FEED_MODEL, PRODUCT, PRIVACY_AND_ISOLATION, and
+  OPEN_QUESTIONS updated for the information map.
+
+### Changed
+
+- Feed cards are now clickable and open the candidate inspector (buttons,
+  links, and the player keep their own behavior).
+- Viewstream assembly in the extension now classifies and enriches pool
+  candidates before filtering/ranking, so topic-constrained Viewpoints
+  work against real acquired candidates.
+
 ## 2026-09-18 — Phase 2: real candidate acquisition (v0.3.0)
 
 ### Added

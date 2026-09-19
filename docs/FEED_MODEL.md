@@ -57,6 +57,21 @@ real acquisition and ranking signals in later phases. Since Phase 2,
 real acquisition (search queries, channel uploads, playlists) before
 assembly. The feed says what it did; nothing is inferred.
 
+Since Phase 3, candidates are **classified and enriched before assembly**
+(`src/classification/enrich.ts`): the information map supplies
+`topicIds` and `narrativeClusterIds` on real candidates, so the hard
+filters above finally operate on real classification output instead of
+empty arrays. Every classification carries value, confidence,
+origin/method, and evidence; user overrides are applied at enrichment
+time and always win. Where the map says UNKNOWN, the candidate keeps
+empty arrays — filters treat UNKNOWN as UNKNOWN, never as a guess. See
+`docs/CLASSIFICATION.md`.
+
+A Viewpoint may also carry user-authored **assumptions** — temporary
+premises like "My normal information environment generally favors X."
+Assumptions are shown verbatim on the feed and never influence assembly;
+they document what the user premised, nothing more.
+
 ## The ranking engine
 
 Additive and explainable. Every candidate's score is:
