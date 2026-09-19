@@ -2,6 +2,63 @@
 
 All notable changes to MeTube. Dates are system dates.
 
+## 2026-09-19 — US political discovery test viewpoints
+
+### Changed
+
+- Added four clearly marked **DEMO / TEST VIEWPOINTS** for testing
+  Slipgate's political discovery behavior in the United States
+  (`src/viewpoints/test-viewpoints.ts`):
+  `US Political Left — Broad Sample`, `US Political Right — Broad
+  Sample`, `US Political Left — Policy / Primary Sources`, and
+  `US Political Right — Policy / Primary Sources`.
+- The four Viewpoints are user-controlled sampling lenses, not statements
+  that any source or argument is correct, representative, moderate,
+  extreme, or authoritative. Their descriptions and first assumptions
+  say so verbatim, and none of them infers political identity.
+- Each is marked `TEST-SEED` in its description and carries the
+  `vp-test-` id prefix.
+- Acquisition is query-driven from seed concepts only; no individual
+  political channels are hard-coded into the definitions, so the live
+  pool's findings are the test signal.
+- Settings are structurally symmetric across left/right pairs (identical
+  unfamiliarityTarget, explorationPercent, locale, temporal, exposure
+  budget; policy variants additionally carry identical
+  sourceTypePreferences). Only seed concepts and assumption wording
+  differ between the left and right versions of a shape.
+- Schema honesty is recorded in assumptions: locale (en/US) is a soft
+  recorded preference never enforced as a filter; temporal is the
+  wide-window request with no from/to window so unknown publication
+  dates are never dropped; no political classification exists in
+  Slipgate, so political dimensions are UNKNOWN; exposure-budget floors
+  that live acquisition cannot satisfy are reported honestly as
+  violated, never manufactured.
+
+### Unchanged (intentional)
+
+- No architecture, ranking behavior, classification logic, or
+  persistence design changed.
+- The starter set is untouched: the test viewpoints are NOT starters,
+  are never seeded by `acceptStarters`/onboarding, and no existing
+  user receives them automatically. `seedTestViewpoints` must be
+  invoked deliberately.
+- No existing Viewpoint (starter, demo, or user-created) was modified.
+- `sourceTypePreferences` remains recorded and editable but not
+  enforced by ranking.
+
+### Verified
+
+- `npm run typecheck` clean.
+- `npm test`: 178/178 passing (160 baseline + 18 new tests in
+  `tests/test-viewpoints.test.ts` covering markers, ids, titles, exact
+  seed concepts, shared settings, left/right structural symmetry,
+  assumption honesty notes, absence of shared mutable state,
+  independent activation, distinct and MAX_PLAN_STEPS-capped discovery
+  plans, idempotent deliberate seeding, starter-set isolation, and
+  non-editorial summaries).
+- `npm run build`, `npm run build:firefox`, `npm run package:firefox`
+  all succeed; both manifests still identify Slipgate.
+
 ## 2026-09-19 — Slipgate product identity
 
 ### Changed

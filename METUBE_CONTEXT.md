@@ -160,12 +160,34 @@ Principles.
   export" while the underlying format identifier remains `metube-export`
   (documented in the portability panel). No functional change; no stored
   state, schema, or format compatibility affected.
+- 2026-09-19 (test viewpoints): Added four clearly marked DEMO / TEST
+  VIEWPOINTS for testing US political discovery behavior
+  (src/viewpoints/test-viewpoints.ts): US Political Left — Broad Sample,
+  US Political Right — Broad Sample, US Political Left — Policy /
+  Primary Sources, US Political Right — Policy / Primary Sources. They
+  are user-controlled sampling lenses, not statements that any source
+  or argument is correct, representative, moderate, extreme, or
+  authoritative, and they never infer political identity. Seed concepts
+  only — no individual political channels are hard-coded, so live
+  acquisition findings are the test signal. They are NOT starters:
+  seedTestViewpoints is deliberate-only, never wired into onboarding,
+  acceptStarters, or the extension content path, so no existing user
+  receives them automatically. Left/right pairs are structurally
+  symmetric (identical settings; only seed concepts and assumption
+  wording differ). Schema honesty is recorded in assumptions: locale
+  en/US is soft recorded (never enforced), temporal is the wide-window
+  request (no from/to window; unknown publication dates never dropped),
+  no political classification exists (political dimensions all UNKNOWN),
+  and unsatisfiable budget floors are reported honestly as violated,
+  never manufactured. No architecture, ranking, classification, or
+  persistence behavior changed; starters/demo/user Viewpoints untouched;
+  the starter political-vocabulary ban stays intact and test-enforced.
 
 ## Verification commands
 
 ```sh
 npm run typecheck
-npm test                   # 160 tests
+npm test                   # 178 tests
 npm run build              # Chromium dist/
 npm run build:firefox      # Firefox dist-firefox/
 npm run package:firefox    # metube-firefox.xpi
