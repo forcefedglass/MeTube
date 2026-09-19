@@ -1,26 +1,29 @@
 # Product
 
+**Product display name:** YourTube · **Internal project codename:** MeTube
+
 ## Thesis
 
-MeTube is an independent discovery and recommendation layer for YouTube.
+YourTube (internal codename MeTube) is an independent discovery and
+recommendation layer for YouTube.
 
 People use YouTube for two different things: (1) consuming what they already
 like, and (2) finding what they don't yet know. YouTube's recommendation
-system is optimized for (1) — it predicts the next thing you'll click. MeTube
-exists for (2). It helps a person explore YouTube **without contaminating
-their normal YouTube recommendation profile**, and without being pulled back
-toward the familiar.
+system is optimized for (1) — it predicts the next thing you'll click.
+YourTube exists for (2). It helps a person explore YouTube **without
+contaminating their normal YouTube recommendation profile**, and without
+being pulled back toward the familiar.
 
 > Don't predict what I want to believe. Help me see what I haven't seen.
 
-## What MeTube is not
+## What YourTube is not
 
 - Not an ad blocker.
 - Not a UI skin for YouTube.
-- Not a political-balance tool. MeTube deliberately does not classify
+- Not a political-balance tool. YourTube deliberately does not classify
   content along political axes, does not measure "both-sides-ness", and does
   not optimize for ideological coverage.
-- Not a re-ranker of YouTube's Home feed. MeTube never consumes YouTube's
+- Not a re-ranker of YouTube's Home feed. YourTube never consumes YouTube's
   own recommendations as input.
 
 ## Users
@@ -40,10 +43,10 @@ the profile that their everyday viewing depends on.
 3. **Build the discovery graph** (see `DISCOVERY_MODEL.md`).
 4. **Rank with the explainable engine** (see `FEED_MODEL.md`). Every
    candidate's score decomposes into named components, always visible.
-5. **Present the MeTube feed**, with "why this appeared" on every card and a
+5. **Present the YourTube feed**, with "why this appeared" on every card and a
    feed autopsy view.
 6. **Collect explicit feedback only.** Clicks and watch time are
-   deliberately not signals. The user says what they think; MeTube does not
+   deliberately not signals. The user says what they think; YourTube does not
    guess.
 7. **Play in isolation** (see `PRIVACY_AND_ISOLATION.md`).
 
@@ -90,7 +93,7 @@ firewall keeps Viewpoints independent: feedback inside one Viewpoint never
 trains unrelated Viewpoints, and normal YouTube state is never mutated.
 
 **Perspective pairing is evidence-gated.** Where candidates address the
-same subject from materially different evidenced positions, MeTube offers
+same subject from materially different evidenced positions, YourTube offers
 "Compare treatments". There is no forced two-sided symmetry — there may be
 one, two, three, or five meaningful clusters, and opposition is never
 invented for balance.
@@ -136,7 +139,7 @@ The feed should be diverse along these axes, in rough priority order:
 
 ## Success looks like
 
-A user can open MeTube, see material they would never have found via
+A user can open YourTube, see material they would never have found via
 YouTube's own system, understand exactly why each item appeared, give
 explicit feedback that visibly changes the next feed, and trust that none of
 this leaked into their normal YouTube session.

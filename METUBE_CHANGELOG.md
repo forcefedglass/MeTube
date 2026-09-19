@@ -2,7 +2,61 @@
 
 All notable changes to MeTube. Dates are system dates.
 
+## 2026-09-19 — crystallization pass
+
+### Added
+
+- `METUBE_CRYSTALLIZATION.md`: the authoritative crystallized project-state
+  record — product identity, implemented system, verified runtime
+  behavior, fixtures/heuristics/approximation debt inventory, settled
+  decisions (FROZEN / VERIFIED / IMPLEMENTED / PROVISIONAL / OPEN /
+  DEPRECATED), adversarial risk review, known limitations, and the next
+  implementation frontier (NEXT / LATER / RESEARCH).
+
+### Changed
+
+- Public-facing display name is now **YourTube**. Applies to: extension
+  display name (manifest `name` in dist/ and dist-firefox/ and the
+  packaged xpi), YouTube sidebar nav entry + floating toggle, shell
+  heading, onboarding text, Time Machine no-causal note, portability panel
+  and export/rejection messages, coverage-map familiarity heading, autopsy
+  familiarity detail, starter Viewpoint description, composer floor-rule
+  text, channel-familiarity labels, playback iframe title, package.json
+  description, README, docs/PRODUCT.md. No functional change.
+- METUBE_CONTEXT.md reduced to durable knowledge (thesis, toolchain
+  facts, machine-specific validation mechanics, decisions log) and now
+  refers to METUBE_CRYSTALLIZATION.md as the authoritative state record;
+  content duplicated there was removed.
+- METUBE_CHANGELOG.md: this entry. Earlier entries remain as originally
+  written (they describe the product under its internal codename MeTube,
+  which is historically accurate).
+
+### Unchanged (intentional)
+
+- Internal/project codename MeTube: repository name, package name
+  (`metube`), IndexedDB database `metube`, storage keys, `metube-*` DOM
+  ids/CSS classes, export format `metube-export`, `MeTubeExportV1`
+  interface, gecko id `metube@metube.local`, xpi filename
+  `metube-firefox.xpi`, `METUBE_*.md` file names, code comments, console
+  prefixes. Renaming any of these would break stored state, format
+  compatibility, or E2E selectors.
+- Version stays 0.6.0; no code behavior changed in this pass.
+
+### Verified
+
+- typecheck clean; tests 160/160; Chromium build, Firefox build, and xpi
+  packaging all succeed; packaged manifests carry `"name": "YourTube"`
+  with the internal gecko id unchanged.
+- Firefox E2E 26/26 and Chromium E2E regression all-pass with the renamed
+  build (both matrices assert on `metube-*` ids, not display strings).
+- Display-name audit: every current user-facing surface says YourTube; no
+  internal identifier was renamed.
+
 ## 2026-09-19 — Phase 5: daily-use product (v0.6.0)
+
+> Superseded in part by the crystallization entry above: the display-name
+> change (MeTube → YourTube) and the Phase 5 verification snapshot are
+> restated there. The entry below is kept as originally written.
 
 ### Added
 

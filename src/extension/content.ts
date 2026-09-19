@@ -218,7 +218,7 @@ async function showTab(tab: ShellTab): Promise<void> {
   header.className = 'metube-shell-header';
   const title = document.createElement('h2');
   title.className = 'metube-shell-title';
-  title.textContent = 'MeTube';
+  title.textContent = 'YourTube';
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button';
   closeBtn.className = 'metube-shell-close';

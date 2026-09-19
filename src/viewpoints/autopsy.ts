@@ -242,7 +242,7 @@ export function computeFeedAutopsy(
     label: 'Familiarity',
     value: `${(familiarShare * 100).toFixed(0)}% familiar (${familiarCount}/${n})`,
     detail:
-      'Familiar = MeTube-internal familiarity only (explicit exposure facts + the legacy more-like-this signal, ' +
+      'Familiar = YourTube-internal familiarity only (explicit exposure facts + the legacy more-like-this signal, ' +
       'per the exploration firewall). YouTube watch history is never read. Unknown familiarity is not guessed.',
   });
 

@@ -15,7 +15,7 @@ export function buildIsolatedPlayer(videoId: string): HTMLIFrameElement {
   iframe.src = isolatedEmbedUrl(videoId);
   iframe.setAttribute('sandbox', ISOLATED_SANDBOX);
   iframe.setAttribute('referrerpolicy', ISOLATED_REFERRER_POLICY);
-  iframe.setAttribute('title', 'MeTube isolated playback');
+  iframe.setAttribute('title', 'YourTube isolated playback');
   iframe.allow = ISOLATED_ALLOW_FEATURES;
   iframe.style.width = '100%';
   iframe.style.height = '100%';

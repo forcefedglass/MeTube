@@ -1,8 +1,10 @@
-# MeTube
+# YourTube
 
 An independent discovery and recommendation layer for YouTube.
 
-MeTube is **not** an ad blocker, a UI skin, a political-balance tool, or a
+**Product display name:** YourTube · **Internal project codename:** MeTube
+
+YourTube is **not** an ad blocker, a UI skin, a political-balance tool, or a
 re-ranker of YouTube's Home feed. It is a separate discovery pipeline that
 surfaces videos from independent sources, builds its own discovery graph,
 and plays them in an isolated session.
@@ -15,7 +17,8 @@ I haven't seen.*
 v0.6.0 (Phase 5, daily-use product). The full product surface runs on both
 Firefox and Chromium: Viewpoint-driven discovery, exposure-budget
 composition, feed autopsy, Time Machine, provenance chains, portability,
-and a tabbed shell. See `METUBE_CHANGELOG.md` for history and
+and a tabbed shell. See `METUBE_CHANGELOG.md` for history,
+`METUBE_CRYSTALLIZATION.md` for the current-state record, and
 `METUBE_CONTEXT.md` for durable state.
 
 ## What it does
@@ -45,9 +48,9 @@ and a tabbed shell. See `METUBE_CHANGELOG.md` for history and
   suppressed. Session isolation, not anonymity (loading a video still
   contacts YouTube).
 
-MeTube does **not** attempt to determine what you should believe. Viewpoints
-are user-controlled lenses for sampling information differently — nothing
-more.
+YourTube does **not** attempt to determine what you should believe.
+Viewpoints are user-controlled lenses for sampling information differently
+— nothing more.
 
 ## Install (Firefox)
 
@@ -65,8 +68,8 @@ require a one-time preference change to install it:
    (On Firefox Developer Edition or Nightly this is already allowed.)
 3. Open `about:addons` → gear icon → "Install Add-on From File…" →
    select `metube-firefox.xpi` → confirm the one-time warning.
-4. Navigate to youtube.com. A "MeTube" entry appears in the guide (plus a
-   floating toggle if the guide is absent). Click it to open MeTube.
+4. Navigate to youtube.com. A "YourTube" entry appears in the guide (plus
+   a floating toggle if the guide is absent). Click it to open YourTube.
 
 First run shows the onboarding gate: accept five generic, fully editable
 starter Viewpoints, or start empty and author your own.
@@ -79,7 +82,7 @@ npm run build     # bundles dist/content.js + dist/manifest.json
 ```
 
 Then in Chromium: `chrome://extensions` → Developer mode → Load unpacked →
-select `dist/`. Navigate to youtube.com; a "MeTube" entry appears in the
+select `dist/`. Navigate to youtube.com; a "YourTube" entry appears in the
 guide.
 
 ## Development
@@ -103,7 +106,7 @@ never the default user experience.
   No AMO listing.
 - **Storage lives on the youtube.com page origin** (content-script
   IndexedDB), not extension storage: clearing site data for youtube.com
-  clears MeTube state. Export/import is the backup and migration path.
+  clears YourTube state. Export/import is the backup and migration path.
 - **Starter Viewpoint seeds are tuned to the development fixture catalog**
   so each mechanism is demonstrable in dev mode; live acquisition quality
   depends on YouTube page parsing, which degrades to honest empty steps

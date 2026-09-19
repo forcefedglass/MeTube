@@ -24,9 +24,9 @@ export function renderPortabilityPanel(callbacks: PortabilityCallbacks): HTMLEle
   const desc = document.createElement('p');
   desc.className = 'metube-portability-note';
   desc.textContent =
-    'Exports contain your Viewpoints, Viewlists, classification overrides, and MeTube preferences in a ' +
+    'Exports contain your Viewpoints, Viewlists, classification overrides, and YourTube preferences in a ' +
     'versioned format (metube-export v1). Feedback history is private data and is included only when you ' +
-    'explicitly select it. Nothing outside MeTube\'s own stores is ever exported.';
+    'explicitly select it. Nothing outside YourTube\'s own stores is ever exported.';
   wrap.append(desc);
 
   // --- Export ---------------------------------------------------------------

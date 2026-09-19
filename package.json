@@ -2,7 +2,7 @@
   "name": "metube",
   "version": "0.6.0",
   "private": true,
-  "description": "MeTube — an independent discovery and recommendation layer for YouTube. Local-first browser extension. Not affiliated with YouTube or Google.",
+  "description": "YourTube — an independent discovery and recommendation layer for YouTube. Local-first browser extension. Not affiliated with YouTube or Google.",
   "license": "MIT",
   "type": "commonjs",
   "scripts": {

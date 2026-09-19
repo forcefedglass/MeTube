@@ -20,7 +20,7 @@ export function renderOnboardingPanel(callbacks: OnboardingCallbacks): HTMLEleme
   const wrap = document.createElement('section');
   wrap.className = 'metube-onboarding';
   const h = document.createElement('h2');
-  h.textContent = 'MeTube';
+  h.textContent = 'YourTube';
   wrap.append(h);
   for (const paragraph of ONBOARDING_TEXT) {
     const p = document.createElement('p');

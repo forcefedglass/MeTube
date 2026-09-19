@@ -207,10 +207,10 @@ export type ChannelFamiliarity =
   | 'unknown';
 
 export const CHANNEL_FAMILIARITY_LABELS: Record<ChannelFamiliarity, string> = {
-  'never-seen': 'Never seen in MeTube',
-  'seen-once': 'Seen once in MeTube',
-  'seen-few': 'Seen a few times in MeTube',
-  'seen-often': 'Seen often in MeTube',
+  'never-seen': 'Never seen in YourTube',
+  'seen-once': 'Seen once in YourTube',
+  'seen-few': 'Seen a few times in YourTube',
+  'seen-often': 'Seen often in YourTube',
   familiar: 'Familiar (explicit feedback recorded)',
   unknown: 'Unknown',
 };
