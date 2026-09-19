@@ -204,12 +204,37 @@ Principles.
   test-viewpoints directly; the only production import path is
   src/onboarding/demo-viewpoints.ts (explicit opt-in wrapper). Tour
   state and demo opt-in never infer or record political identity.
+- 2026-09-19 (retrieval isolation): The candidate CATALOG and a
+  Viewpoint's WORKING SET are distinct concepts. The catalog (candidate
+  pool, KV `candidate-pool`) is the shared, reusable global cache: it
+  exists for deduplication and TTL-based reuse across Viewpoints, and
+  its size is capped at 600 entries. A Viewpoint's working set is the
+  subset of the catalog its Viewstream may be composed from, decided by
+  existing provenance ONLY: a candidate qualifies iff its primary
+  provenance `viewpointId` equals that Viewpoint OR its
+  `alsoDiscoveredVia` array contains a provenance record with that
+  `viewpointId` (an independent rediscovery). No pin/save-into-Viewpoint
+  mechanism exists yet, so no such qualification path exists — that is
+  documented, not invented. Working-set selection is a pure read over
+  the catalog (`src/viewpoints/workingset.ts`); the catalog itself is
+  never filtered per Viewpoint. The Viewstream panel shows four
+  diagnostics (catalog size, working-set size, shared with other
+  Viewpoints, exclusive to active); the pool inspector still shows the
+  global catalog. Saved-tab title resolution reads the full catalog
+  because saves are exposure facts, not working-set membership.
+  FROZEN consequences: cross-Viewpoint leakage into composition is a
+  defect by definition; two Viewpoints sharing an independently
+  discovered candidate is correct, not leakage; feedback isolation is
+  unchanged (exposure facts never train preferences; the exploration
+  firewall still lenses every Viewpoint's training input). Known latent
+  gap: 'One Subject, Many Angles' has a working set of 0 in fixture mode
+  because its seed query harvests no fixtures.
 
 ## Verification commands
 
 ```sh
 npm run typecheck
-npm test                   # 201 tests
+npm test                   # 214 tests
 npm run build              # Chromium dist/
 npm run build:firefox      # Firefox dist-firefox/
 npm run package:firefox    # metube-firefox.xpi

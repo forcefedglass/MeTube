@@ -115,6 +115,12 @@ export const FEED_STYLES = `
   justify-self: start; margin-top: 8px;
 }
 .metube-pool-inspector > button:hover { background: #3a4048; }
+.metube-workingset {
+  background: #1c1f24; border: 1px solid #2a2f36; border-radius: 12px;
+  padding: 12px; margin: 12px 0; display: grid; gap: 4px;
+}
+.metube-workingset h4 { margin: 0 0 4px; font-size: 13px; color: #9aa0a6; }
+.metube-workingset-intro { color: #9aa0a6; font-size: 12px; margin: 2px 0 6px; }
 .metube-card-inspectable { cursor: pointer; }
 .metube-card-inspectable:hover { border-color: #8ab4f8; }
 .metube-inspector {

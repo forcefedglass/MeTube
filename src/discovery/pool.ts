@@ -99,18 +99,32 @@ export function mergeIntoPool(
     const existing = byId.get(c.videoId);
     if (existing) {
       duplicates += 1;
+      // Dedup on the full provenance identity INCLUDING the discovering
+      // Viewpoint: two Viewpoints running the same seed are two distinct
+      // discoveries, and both must be recorded (retrieval isolation
+      // depends on the alsoDiscoveredVia relationship being complete).
       const sameStep = existing.alsoDiscoveredVia.some(
         (p) =>
           p.provider === c.provenance.provider &&
           p.method === c.provenance.method &&
-          p.seed === c.provenance.seed,
+          p.seed === c.provenance.seed &&
+          p.viewpointId === c.provenance.viewpointId,
       );
       const samePrimary =
         existing.candidate.provenance.provider === c.provenance.provider &&
         existing.candidate.provenance.method === c.provenance.method &&
-        existing.candidate.provenance.seed === c.provenance.seed;
+        existing.candidate.provenance.seed === c.provenance.seed &&
+        existing.candidate.provenance.viewpointId === c.provenance.viewpointId;
       if (!sameStep && !samePrimary) {
-        existing.alsoDiscoveredVia.push(c.provenance);
+        // Immutable replace, never mutate: entries read from IndexedDB are
+        // Xray-wrapped in Firefox content scripts, and pushing a sandbox
+        // object onto a wrapped array throws ("Not allowed to define
+        // cross-origin object as property"). Building a fresh entry keeps
+        // the merge pure and Xray-safe.
+        byId.set(c.videoId, {
+          candidate: existing.candidate,
+          alsoDiscoveredVia: [...existing.alsoDiscoveredVia, c.provenance],
+        });
       }
       continue;
     }

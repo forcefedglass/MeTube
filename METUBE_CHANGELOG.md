@@ -2,6 +2,72 @@
 
 All notable changes to MeTube. Dates are system dates.
 
+## 2026-09-19 — Retrieval isolation: Viewpoint working sets (bounded pass)
+
+### Changed
+
+- **Composition now reads a Viewpoint working set, not the global
+  candidate catalog** (`src/viewpoints/workingset.ts`). The candidate
+  pool stays a shared, reusable global cache (dedup + TTL reuse across
+  Viewpoints), but a Viewpoint's Viewstream is composed only from
+  candidates whose recorded provenance ties them to that Viewpoint:
+  a candidate qualifies iff it was originally discovered by that
+  Viewpoint (primary provenance `viewpointId`) OR that Viewpoint
+  independently rediscovered it (recorded in `alsoDiscoveredVia`).
+  Independently discovered candidates legitimately appear in multiple
+  Viewpoints' working sets; everything else stays cached but invisible.
+- **Provenance dedup now includes the discovering Viewpoint**
+  (`src/discovery/pool.ts`). Before this pass, two Viewpoints running
+  the same seed text were collapsed to one provenance record, so the
+  second Viewpoint's rediscovery was NOT recorded and its working set
+  missed genuinely discovered candidates. `mergeIntoPool`'s duplicate
+  identity now compares `viewpointId` alongside provider/method/seed.
+- **`mergeIntoPool` no longer mutates pool entries read from storage**
+  (Firefox Xray fix). Appending to `alsoDiscoveredVia` on an entry read
+  from IndexedDB threw "Not allowed to define cross-origin object as
+  property on [Object] or [Array] XrayWrapper" in Firefox content
+  scripts, aborting composition with no visible error (the mount had
+  already been cleared). The duplicate-merge path now replaces the
+  entry immutably, so the merge is actually pure as documented and
+  Xray-safe.
+- **Two starter Viewpoints gained honest seeds**
+  (`src/viewpoints/starters.ts`). "Outside My Usual Bubble" and "Mixed
+  Source Types" previously had no seeds: pre-isolation they composed
+  from other Viewpoints' pool leakage — exactly what this pass
+  eliminates. Each now carries seed topics that produce real
+  discoveries.
+- **Saved tab title resolution reads the global pool**
+  (`src/extension/content.ts`): saves are exposure facts about the
+  global catalog, not working-set members, so their titles resolve from
+  every candidate the cache knows.
+- **Autopsy "pool vs feed" metric now reports the working set**
+  (`src/viewpoints/autopsy.ts`): value reads "N eligible → M composed"
+  where N is the active Viewpoint's working-set size, not the global
+  catalog size.
+
+### Added
+
+- **Working-set diagnostics panel** (`src/ui/workingset-panel.ts`) on
+  the Viewstream tab: four counts only — global candidate catalog size,
+  active Viewpoint's working-set size, shared with other Viewpoints,
+  exclusive to this Viewpoint. No new user-facing controls.
+- **Working-set test suite** (`tests/workingset.test.ts`, 12 tests)
+  covering all eight isolation requirements: cross-Viewpoint
+  non-leakage, shared independent discovery, global cache reuse,
+  duplicate suppression, switch-without-contamination, feedback
+  isolation, provenance inspectability, and autopsy reflecting the
+  working set — plus manual (null-provenance) adds, deleted-Viewpoint
+  sharers, and `alsoDiscoveredVia` extension.
+
+### Notes
+
+- No pin/save-into-Viewpoint mechanism exists yet, so "explicitly saved
+  into a Viewpoint" is not currently a working-set qualification path;
+  this is documented rather than invented.
+- "One Subject, Many Angles" has a working set of 0 in fixture mode (its
+  'Aerospace engineering' seed harvests no fixtures) — a latent gap in
+  fixture coverage, not an isolation defect.
+
 ## 2026-09-19 — Guided first-use onboarding (Phase 6)
 
 ### Added

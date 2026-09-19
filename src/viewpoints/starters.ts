@@ -47,6 +47,10 @@ export function starterViewpoints(): Viewpoint[] {
       `${STARTER_MARKER} — favors sources and topics Slipgate has never shown you (strictly-unfamiliar channels, high exploration share). Demonstrates the unfamiliarity and exploration controls.`,
       NOW,
       {
+        // Self-sufficient seeds: retrieval isolation means a Viewpoint
+        // composes only what its OWN plan discovers, so every starter
+        // must carry seeds of its own.
+        seedTopics: ['topic-urban', 'topic-music'],
         unfamiliarityTarget: 'strictly-unfamiliar',
         explorationPercent: 0.4,
         weightOverrides: [
@@ -61,6 +65,10 @@ export function starterViewpoints(): Viewpoint[] {
       `${STARTER_MARKER} — deliberately mixes source types (publications, independent creators, technical analysts...) instead of letting one kind dominate. Demonstrates the exposure budget.`,
       NOW,
       {
+        // Self-sufficient seeds: retrieval isolation means a Viewpoint
+        // composes only what its OWN plan discovers, so every starter
+        // must carry seeds of its own.
+        seedTopics: ['topic-history', 'topic-cooking'],
         exposureBudget: {
           maxSingleChannelShare: 0.25,
           maxSingleNarrativeShare: 0.4,

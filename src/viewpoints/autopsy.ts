@@ -85,10 +85,11 @@ function distBucket(map: Map<string, ShareEntry>): ShareEntry[] {
 }
 
 /**
- * Compute the feed autopsy over a composed Viewstream and its pool.
+ * Compute the feed autopsy over a composed Viewstream and its working set.
  *
- * `feed` = what was composed; `pool` = candidates available after hard
- * filters (the pool the composer selected from). Both are recorded data.
+ * `feed` = what was composed; `pool` = the Viewpoint's working set —
+ * candidates whose recorded provenance ties them to this Viewpoint, after
+ * hard filters and muting (the composer's input). Both are recorded data.
  */
 export function computeFeedAutopsy(
   feed: FeedCandidate[],
@@ -321,13 +322,14 @@ export function computeFeedAutopsy(
     });
   }
 
-  // --- Pool vs feed ----------------------------------------------------------
+  // --- Working set vs feed ---------------------------------------------------
   metrics.push({
     id: 'pool-vs-feed',
-    label: 'Pool vs feed',
-    value: `${pool.length} available → ${n} composed`,
+    label: 'Working set vs feed',
+    value: `${pool.length} eligible → ${n} composed`,
     detail:
-      'Available = candidates in the pool after the Viewpoint\'s hard filters and muting (the composer\'s input). ' +
+      'Eligible = candidates in this Viewpoint\'s working set (recorded provenance ties them to this Viewpoint) ' +
+      'after the Viewpoint\'s hard filters and muting — the composer\'s input, never the global catalog. ' +
       'The gap is dominated by limit (feed size), ceilings, floors, and cooldowns — each enforced or honestly ' +
       'reported by the composer, never silently.',
   });

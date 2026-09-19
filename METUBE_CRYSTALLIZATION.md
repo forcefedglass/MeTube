@@ -147,6 +147,10 @@ AcquisitionStep reports (honest failures recorded, never retried)
 Candidate pool (merge/prune/TTL, MAX_POOL_SIZE)   --- PERSISTED (IndexedDB)
         |
         v
+Working-set selection by provenance (primary viewpointId or
+alsoDiscoveredVia)  [viewpoints/workingset.ts]
+        |
+        v
 Enrich: classify + merge classification into pool candidates,
         apply user overrides at READ time  [classification/enrich.ts]
         |
@@ -208,6 +212,32 @@ data, zero candidates — never swallowed, never retried in-run). It never
 fetches the Home feed. `fixture-provider.ts` implements the same
 `runPlan` contract against a synthetic catalog for development mode
 (gated by the explicit `use-fixture-provider` KV flag).
+
+### Candidate Catalog vs Viewpoint Working Set
+
+The candidate pool is the shared global CATALOG: one reusable cache for
+deduplication and TTL-based reuse across Viewpoints (capped, pruned
+oldest-first). Composition never reads the catalog directly. Each
+Viewpoint composes from its WORKING SET (`viewpoints/workingset.ts`) —
+the catalog subset selected by recorded provenance only:
+
+- a candidate qualifies iff its primary provenance `viewpointId` equals
+  that Viewpoint (originally discovered by it), OR
+- its `alsoDiscoveredVia` array records an independent rediscovery by
+  that Viewpoint.
+
+Independently discovered candidates may therefore appear in several
+Viewpoints' working sets — that is reuse, not leakage. Everything else
+in the catalog stays cached but invisible to that Viewpoint. No
+pin/save-into-Viewpoint mechanism exists yet; no such qualification path
+is invented. Working-set selection is a pure read; the catalog is never
+filtered per Viewpoint. Diagnostics (catalog size, working-set size,
+shared with other Viewpoints, exclusive to active) are shown on the
+Viewstream tab; the pool inspector still shows the global catalog.
+Provenance dedup in `mergeIntoPool` includes the discovering Viewpoint
+identity (same seed run by two Viewpoints = two recorded provenances),
+and the duplicate-merge path replaces entries immutably (Firefox Xray
+content scripts reject pushing sandbox objects onto wrapped arrays).
 
 ### Classification and Information Model
 
@@ -688,15 +718,17 @@ Only risks that materially matter to this codebase:
 
 ## Validation Snapshot
 
-- typecheck: clean. tests: 201/201 (178 baseline + 23 guided-tour
-  tests in `tests/tour.test.ts`). build (Chromium): ok.
+- typecheck: clean. tests: 214/214 (178 baseline + 23 guided-tour
+  tests in `tests/tour.test.ts` + 13 retrieval-isolation tests in
+  `tests/workingset.test.ts`). build (Chromium): ok.
   build:firefox + package:firefox: ok (manifest name "Slipgate", gecko id
   `metube@metube.local`, v0.7.0, zip integrity ok).
-- Firefox E2E: Phase 5 regression matrix 26/26; guided-onboarding
-  walkthrough (fresh profile, persistent install) 64/64 — three-path
-  gate, full tour with live values, disclaimer-before-opt-in, demo
-  add/remove isolation, fork survival, mid-tour skip, replay, SPA-nav
-  and reload non-duplication.
+- Firefox E2E: Phase 5 regression matrix 26/26 (includes rapid
+  Viewpoint-switch recomposition through isolated working sets);
+  guided-onboarding walkthrough (fresh profile, persistent install)
+  64/64 — three-path gate, full tour with live values,
+  disclaimer-before-opt-in, demo add/remove isolation, fork survival,
+  mid-tour skip, replay, SPA-nav and reload non-duplication.
 - Chromium E2E: Phase 5 regression clean; onboarding E2E 38/38, no page
   errors.
 - Identity audit: all current user-facing surfaces say "Slipgate";
@@ -708,10 +740,11 @@ Only risks that materially matter to this codebase:
 
 ## Current Commit
 
-This record describes the repository after Phase 6 (guided first-use
-onboarding, v0.7.0). Phase 5 stood at `bfdc6c5` ("Phase 5: daily-use
-product (v0.6.0)", branch main). Public identity history: MeTube
-(internal codename and original public name) → YourTube (interim public
-name, 2026-09-19) → Slipgate (current public name, with tagline
+This record describes the repository after the retrieval-isolation pass
+(Viewpoint working sets, 2026-09-19). Phase 6 (guided first-use
+onboarding, v0.7.0) stood at `817ef3c`; Phase 5 at `bfdc6c5` ("Phase 5:
+daily-use product (v0.6.0)", branch main). Public identity history:
+MeTube (internal codename and original public name) → YourTube (interim
+public name, 2026-09-19) → Slipgate (current public name, with tagline
 "Escape Your Walled Garden."). Internal identifiers have been "MeTube"
 throughout and remain so.

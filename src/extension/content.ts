@@ -36,6 +36,8 @@ import type { Viewpoint, TimeMachineConfig } from '../model/viewpoint';
 import { newViewpoint } from '../model/viewpoint';
 import { renderViewpointManager } from '../ui/viewpoint-manager';
 import { renderPoolInspector } from '../ui/pool-inspector';
+import { renderWorkingSetPanel } from '../ui/workingset-panel';
+import { viewpointWorkingSet, workingSetDiagnostics } from '../viewpoints/workingset';
 import { renderCandidateInspector } from '../ui/candidate-inspector';
 import { FIXTURE_TOPICS } from '../discovery/fixtures';
 import { FIXTURE_CHANNELS } from '../discovery/fixtures';
@@ -189,6 +191,8 @@ interface ComposedContext {
   lookup: (videoId: string) => import('../model/classification').VideoClassification | undefined;
   overrides: ClassificationOverride[];
   activeViewpoint: Viewpoint | null;
+  /** Working-set diagnostics for the active Viewpoint (counts only). */
+  workingSet: import('../viewpoints/workingset').WorkingSetDiagnostics | null;
 }
 
 let lastComposed: ComposedContext | null = null;
@@ -659,8 +663,17 @@ async function composeNow(active: Viewpoint | null): Promise<ComposedContext> {
         now: nowIso(),
       },
     );
-    const candidates = nextPool.entries.map(toCandidateVideo);
-    const overrides = await loadOverrides(store);
+    // Retrieval isolation: composition sees only the working set —
+    // candidates whose recorded provenance ties them to THIS Viewpoint.
+    // The global pool stays global for caching and deduplication.
+    const repo = openViewpointRepository(store);
+    const [allViewpointIds, overrides] = await Promise.all([
+      repo.list().then((vps) => vps.map((v) => v.id)),
+      loadOverrides(store),
+    ]);
+    const workingSetEntries = viewpointWorkingSet(nextPool.entries, active.id);
+    const workingSet = workingSetDiagnostics(nextPool.entries, active.id, allViewpointIds);
+    const candidates = workingSetEntries.map(toCandidateVideo);
     const catalog = workingCatalog();
     const enriched = enrichCandidates(candidates, catalog, overrides, nowIso());
     const lookup = classificationIndexFor(enriched);
@@ -693,6 +706,7 @@ async function composeNow(active: Viewpoint | null): Promise<ComposedContext> {
       lookup,
       overrides,
       activeViewpoint: active,
+      workingSet,
     };
   }
   // Unlensed bootstrap feed.
@@ -705,6 +719,7 @@ async function composeNow(active: Viewpoint | null): Promise<ComposedContext> {
     lookup: () => undefined,
     overrides: [],
     activeViewpoint: null,
+    workingSet: null,
   };
 }
 
@@ -744,6 +759,11 @@ async function renderViewstreamTab(active: Viewpoint | null): Promise<HTMLElemen
       }
       assumptions.append(ul);
       wrap.append(assumptions);
+    }
+    // Retrieval-isolation diagnostics: what the working set contains,
+    // next to the global catalog it was selected from.
+    if (ctx.workingSet) {
+      wrap.append(renderWorkingSetPanel(ctx.workingSet));
     }
   }
 
@@ -1125,8 +1145,11 @@ function renderPortabilitySection(): HTMLElement {
 
 async function renderSavedTab(): Promise<HTMLElement> {
   const profile = await loadProfile();
-  const ctx = lastComposed ?? (lastComposed = await composeNow(await openViewpointRepository(store).getActive()));
-  return renderSavedPanel(profile, ctx.poolCandidates);
+  // Saves are global exposure facts: resolve titles from the GLOBAL
+  // candidate catalog, not the active Viewpoint's working set.
+  const pool = await loadPool(store);
+  const candidates = pool.entries.map(toCandidateVideo);
+  return renderSavedPanel(profile, candidates);
 }
 
 // ---------------------------------------------------------------------------
