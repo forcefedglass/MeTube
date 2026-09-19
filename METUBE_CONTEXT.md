@@ -13,7 +13,7 @@ YouTube's Home feed. "Don't predict what I want to believe. Help me see
 what I haven't seen." Exploration must not contaminate the user's normal
 YouTube recommendation profile.
 
-## State (2026-09-18, Phase 4 Viewstream composer complete)
+## State (2026-09-19, Phase 5 daily-use product complete)
 
 ### VERIFIED
 
@@ -21,26 +21,40 @@ YouTube recommendation profile.
   npm config sets `omit=["dev"]`; plain `npm install` silently skips
   devDependencies — always install with `--include=dev`).
 - **Typecheck**: `npm run typecheck` (tsc --noEmit) passes clean.
-- **Tests**: `npm test` → 143/143 pass (bootstrap 6 + Phase 1 22 + Phase 2 31
-  + Phase 3 35 + Phase 4 49: composer budgets 25, feedback semantics +
-  firewall + pairing + blind spots 24). Phase 4 coverage: exposure
-  ceilings/floors on the final feed, honest per-rule violation reports,
-  cooldown scoping, relief pass (soft rules never empty the feed),
-  exploration wildcard pool bypass, feedback semantics taxonomy, exploration
-  firewall (per-Viewpoint scoping; 'watched' recorded per-Viewpoint but
-  stays an exposure fact), evidence-gated perspective pairing, descriptive
-  blind spots (no prescriptions). Prior phases: classification
-  explainability/determinism, UNKNOWN over invention, no political
-  inference, override win + regeneration survival, enrichment → filter
-  path, coverage map counts, assumptions inertness, yt-parser vs real
-  captured fixtures, plan derivation, provider transport, pool
-  merge/prune/TTL, toCandidateVideo sentinels, unknown-date window,
-  temporal diversity exclusion, inspectPool, channel normalization,
-  channel-id resolution, unparseable-window tolerance.
-- **Extension build**: `npm run build` produces `dist/content.js` (IIFE,
-  esbuild) + `dist/manifest.json` (MV3). Manifest carries NO permissions;
-  acquisition fetches are same-origin from the youtube.com content script
-  with `credentials: 'omit'`.
+- **Tests**: `npm test` → 160/160 pass (bootstrap 6 + Phase 1 22 +
+  Phase 2 31 + Phase 3 35 + Phase 4 49 + Phase 5 17: time machine
+  period math + no-causal-language, autopsy metric invariants,
+  provenance chain shape, portability round-trip + merge modes +
+  feedback opt-out/opt-in + rejection paths, fork lineage, onboarding
+  state machine, starter seeding).
+- **Extension builds (both targets)**: `npm run build` → dist/
+  (Chromium MV3, no permissions); `npm run build:firefox` → dist-firefox/
+  (adds `browser_specific_settings.gecko.id` `metube@metube.local`,
+  strict_min_version 115.0); `npm run package:firefox` →
+  `metube-firefox.xpi` (dependency-free zip writer, manifest first,
+  integrity checked).
+- **Firefox E2E (26/26)**: headless Firefox ESR 140.16.0 +
+  geckodriver 0.37.1, fresh profile with prefs
+  (`xpinstall.signatures.required=false`,
+  `extensions.autoDisableScopes=0`,
+  `extensions.experiments.enabled=true`), persistent
+  `install_addon(temporary=False)`. Matrix
+  (`/tmp/metube-ff-matrix-final.py`): single injection + single style
+  block; no duplication across SPA pushState, full navigation, reload,
+  browser restart; onboarding gate (no-belief statement) with both
+  paths; five tabs; state across tab cycles; rapid switching; Viewpoint
+  isolation; 10 autopsy metrics; Time Machine note + 5 inputs; export
+  default + feedback opt-in (documents read from the download dir);
+  import round-trip via real file input; wrong-format rejection;
+  fixture playback honestly disabled; five-step provenance chain;
+  persistence across reload and restart. Firefox notes:
+  `install_addon(temporary=True)` is broken (content scripts never run)
+  — always persistent install; reinstalling over an existing profile
+  can hang on a silent dialog — always fresh profile per run.
+- **Chromium E2E regression (all pass)**: headless Playwright with
+  `launchPersistentContext`, fresh profile, `--no-sandbox`; content
+  bundle injected via `page.evaluate` (IIFE self-bootstraps; injection
+  is idempotent). Same product matrix minus install mechanics.
 - **Phase 2 browser verification** (headed Chromium via xvfb-run, fresh
   profile each run; scripts under /tmp, e.g. `/tmp/verify-p2run4.mjs`,
   `/tmp/verify-p2chan9.mjs`, `/tmp/verify-p2cache.mjs`):
@@ -104,6 +118,55 @@ YouTube recommendation profile.
 
 ### IMPLEMENTED
 
+- **Phase 5 product shell** (`src/extension/content.ts`): tabbed shell
+  (VIEWSTREAM / VIEWPOINTS / VIEWLISTS / COVERAGE / SAVED) — one mount,
+  `showTab(tab)` renders header (active strip + rapid switcher) + tab bar
+  + tab body. `lastComposed` caches the composed context; Viewpoint
+  switching activates, clears the cache, and recomposes. Onboarding gate
+  replaces the shell until `onboarded` KV is set.
+- **Onboarding** (`src/viewpoints/onboarding.ts` +
+  `src/ui/onboarding-panel.ts`): no-belief-determination statement,
+  Viewpoint-as-lens explanation, two paths (accept starters / start
+  empty). `ONBOARDED_KEY` = KV `onboarded`.
+- **Starter Viewpoints** (`src/viewpoints/starters.ts`): five generic
+  editable starters (`vp-starter-*`): Wide Open Sampling, Outside My
+  Bubble, Mixed Source Types, One Subject Many Angles, Deep History.
+  Seeds tuned so each mechanism demonstrates against the fixture catalog
+  (Wide Open seeds all 5 fixture topics → 8-card pool feed; Deep History
+  seeds concept 'jet age' + temporalTo 2026-01-01 → exactly 1 card).
+  Never politically prescriptive.
+- **Time Machine** (`src/viewpoints/timemachine.ts` +
+  `src/ui/time-machine-panel.ts`): `TimeMachineConfig` on
+  ViewpointConfig (anchorDate + 4 day-spans); `comparePeriods` splits
+  pool candidates into pre-event / during-event / post-event /
+  retrospective (+ before-window / unclassifiable) with a standing
+  no-causal-language note. Pure, tested.
+- **Feed Autopsy** (`src/viewpoints/autopsy.ts` +
+  `src/ui/autopsy-panel.ts`): 10 metrics on the composed feed (source /
+  channel / narrative / topic / source-type distribution, familiarity,
+  temporal distribution, exploration percent, budget compliance,
+  pool-vs-feed). Descriptive only.
+- **Provenance chain** (`src/viewpoints/provenance.ts` +
+  `src/ui/provenance-panel.ts`): five-step why-this-appeared chain
+  (Viewpoint rule → discovery → classification → ranking → inclusion).
+  Unrecorded facts state "not recorded" — never back-filled.
+- **Portability** (`src/viewpoints/portability.ts` +
+  `src/ui/portability-panel.ts`): `metube-export` v1; default export
+  excludes feedback (private data), feedback is explicit opt-in; import
+  validates format/version, merge modes keep-mine / import-wins, overrides
+  merged by `videoId::dimension`, active-VP applied only when resolvable +
+  enabled. Export downloads via Blob URL anchor.
+- **Fork flow** (`forkViewpoint` in `src/model/viewpoint.ts` +
+  `repo.fork` + manager button): "Duplicate this Viewpoint and change one
+  assumption" — records `forkedFrom` lineage (source id/title, changed
+  assumption text, timestamp), opens the editor on the fork; lineage
+  renders on the feed and manager.
+- **Saved tab** (`src/ui/saved-panel.ts`): explicit saves ordered by
+  capturedAt.
+- **Shell header** (`src/ui/shell-header.ts`): active Viewpoint strip
+  (always visible) + switcher select on every tab; `renderTabBar`.
+- **Firefox packaging** (`scripts/build-extension.mjs --target=firefox`,
+  `scripts/package-firefox.mjs`): see VERIFIED above.
 - **Viewstream composer** (`src/viewpoints/composer.ts`): Phase 4 core.
   `composeViewstream(candidates, ComposerContext)` → `{snapshot, report}`.
   Budget rules are ceilings/floors on shares of the FINAL composed feed
@@ -344,45 +407,51 @@ YouTube recommendation profile.
   constraint mechanism over fixture topics/narratives. `baselineContext`
   is empty in DEMOs because a user baseline is user-authored by
   definition. No political classification exists anywhere in MeTube.
+  (Phase 5: DEMO viewpoints replaced by generic editable starters in the
+  first-run experience; the fixture-era DEMOs remain for tests.)
 - Phase 3 classifier lexicons are deliberately small and conservative;
   real-world UNKNOWN rates will be high (especially source type, where a
   plain channel title evidences nothing). Raising evidenced coverage
   (e.g., channel about pages as source-type evidence) is OPEN question 18.
 - Coverage map is counts only; no visualization (Phase 3 scope decision).
+- Starter Viewpoint seed values are tuned to the development fixture
+  catalog so every mechanism is demonstrable in dev mode; live-YouTube
+  starter quality depends on `YouTubeWebProvider` parsing (honest empty
+  steps on layout drift).
+- Viewpoint editing remains prompt-based (deliberately plain); no icons.
 
 ### OPEN
 
 - docs/OPEN_QUESTIONS.md (26 items): citation-following semantics,
   random-walk design, narrative clustering process, scale-band data
-  source, weight tuning evidence, feed autopsy contents, familiarity
-  definition, "more-like-this" semantics, storage origin (chrome.storage
-  vs page IndexedDB), playback isolation limits, Firefox compat, feed
-  placement, onboarding, multi-profile, Phase 3 additions (classifier
-  honesty vs. usefulness, cluster assignment at scale, temporal evidence
-  beyond text framing, coverage visualization, assumption effects,
-  override discovery/bulk tools), Phase 4 additions (exploration-seed
-  acquisition integration, budget rule UX beyond prompt dialogs, richer
-  familiarity signals for floor qualification).
+  source, weight tuning evidence, familiarity definition,
+  "more-like-this" semantics, storage origin (chrome.storage
+  vs page IndexedDB), playback isolation limits, multi-profile,
+  classifier honesty vs. usefulness, cluster assignment at scale, temporal
+  evidence beyond text framing, coverage visualization, assumption
+  effects, override discovery/bulk tools, exploration-seed acquisition
+  integration, budget rule UX beyond prompt dialogs, richer familiarity
+  signals for floor qualification.
 - Viewpoint UX beyond prompts (real editor forms, per-field validation).
 - Viewlist-driven behaviors (cycling, comparison views) — none yet.
 - Explicit-video acquisition (accepted by the model, no page-fetch path).
 - Narrative-cluster assignment for real candidates beyond
   provider-carried ids and user overrides (OPEN question 19).
+- Firefox signing/distribution (unsigned xpi requires pref change; AMO
+  listing not attempted).
 
 ### Known gaps (intentionally unimplemented)
 
 - No narrative-AI classification (Phase 3 classifier is deterministic
   lexicons + provider passthrough by instruction; "narrative-AI" remains
   out of scope).
-- No feed autopsy view (snapshot data already recorded for it).
 - Exploration from a blind-spot region records the request but does not
   yet drive acquisition (future work; OPEN question 24).
-- No coverage-map visualization (counts + plain lists only, per Phase 3
-  scope).
-- No Firefox testing or manifest adjustments. Firefox compatibility has
-  NOT been verified and is not claimed.
 - No icons (extension loads without them).
 - No oEmbed/short-circuit metadata fetch for explicit-video seeds.
+- Storage on the youtube.com page origin: clearing site data clears
+  MeTube state; export/import is the migration path (documented
+  limitation, not a silent failure).
 
 ## Decisions log
 
@@ -460,18 +529,42 @@ YouTube recommendation profile.
   facts never train preferences; 'watched' ≠ 'I want more like this'.
   The exploration firewall lenses every Viewpoint's training input (global
   exposure facts + own-Viewpoint signals only).
+- 2026-09-19 (Phase 5): Firefox is a first-class target, packaged via
+  build:firefox / package:firefox with an unsigned xpi (documented pref
+  requirement). No working-architecture rewrites for polish: the shell
+  reuses the Phase 4 composition path; new surfaces (autopsy, Time
+  Machine, provenance, portability) are pure modules rendered by the
+  existing UI pattern.
+- 2026-09-19 (Phase 5): Onboarding states MeTube does not attempt to
+  determine what the user should believe; starters are generic and
+  editable, never politically prescriptive.
+- 2026-09-19 (Phase 5): Time Machine never implies causal knowledge: the
+  period comparison carries a standing note that periods are sampled as
+  the user defines them; no causal language anywhere in the module.
+- 2026-09-19 (Phase 5): Portability exports feedback history only by
+  explicit opt-in (private data); default export is lenses + preferences.
+  Imports merge by explicit mode; imports never silently overwrite.
+- 2026-09-19 (Phase 5): Trusted Types compliance — no innerHTML anywhere
+  in DOM construction (youtube.com enforces TrustedHTML); all UI built via
+  createElement. injectStyles idempotent for content-script re-execution.
 
 ## Verification commands
 
 ```sh
 npm run typecheck
 npm test
-npm run build
-# browser verification (this machine, headed Chromium under xvfb):
-# pattern: launchPersistentContext(fresh profile, ignoreDefaultArgs:
-# ['--disable-extensions'], viewport 1920x1080,
-# --load-extension=/root/MeTube/dist) → goto youtube.com → #metube-nav-entry
-# → "Manage Viewpoints" → activate → observe Viewstream + pool inspector.
-# 1280x720 collapses YouTube's guide; Playwright defaults pass
-# --disable-extensions and must be ignored.
+npm run build              # Chromium dist/
+npm run build:firefox      # Firefox dist-firefox/
+npm run package:firefox    # metube-firefox.xpi
+# Firefox E2E (this machine): headless Firefox ESR + geckodriver; fresh
+# profile + prefs.js (xpinstall.signatures.required=false,
+# extensions.autoDisableScopes=0, extensions.experiments.enabled=true);
+# persistent install_addon(temporary=False); NEVER temporary=True
+# (content scripts never run) and never reinstall over an existing profile
+# (hangs on a silent dialog). Matrix: /tmp/metube-ff-matrix-final.py.
+# Chromium E2E: Playwright launchPersistentContext (fresh profile,
+# --no-sandbox, chrome-linux64 path), inject dist/content.js via
+# page.evaluate after enabling fixture mode through the IndexedDB kv
+# store (use-fixture-provider: true). Regression:
+# /tmp/metube-chromium-phase5.js.
 ```

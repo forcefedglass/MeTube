@@ -8,7 +8,7 @@
  */
 
 import type { Viewpoint, Viewlist } from '../model/viewpoint';
-import { duplicateViewpoint, defaultViewpointConfig } from '../model/viewpoint';
+import { duplicateViewpoint, defaultViewpointConfig, forkViewpoint } from '../model/viewpoint';
 import type { LocalStore } from '../storage/local-store';
 
 export const VIEWPOINTS_KEY = 'viewpoints';
@@ -24,6 +24,8 @@ export interface ViewpointRepository {
   update(vp: Viewpoint): Promise<Viewpoint>;
   remove(id: string): Promise<void>;
   duplicate(id: string, newTitle: string): Promise<Viewpoint>;
+  /** Phase 5 fork: duplicate + record lineage + the changed assumption. */
+  fork(id: string, newTitle: string, changedAssumption: string): Promise<Viewpoint>;
   // Viewlists
   listViewlists(): Promise<Viewlist[]>;
   createViewlist(list: Viewlist): Promise<Viewlist>;
@@ -126,6 +128,17 @@ class StoreViewpointRepository implements ViewpointRepository {
     const copy = duplicateViewpoint(source, copyId, newTitle, now);
     await this.writeAll([...all, copy]);
     return copy;
+  }
+
+  async fork(id: string, newTitle: string, changedAssumption: string): Promise<Viewpoint> {
+    const source = await this.get(id);
+    if (!source) throw new Error(`No such Viewpoint: ${id}`);
+    const all = await this.readAll();
+    const forkId = uniqueId(`${id}-fork`, all);
+    const now = new Date().toISOString();
+    const forked = forkViewpoint(source, forkId, newTitle, changedAssumption, now);
+    await this.writeAll([...all, forked]);
+    return forked;
   }
 
   async listViewlists(): Promise<Viewlist[]> {

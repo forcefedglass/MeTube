@@ -118,6 +118,18 @@ export const FEED_STYLES = `
 .metube-card-inspectable { cursor: pointer; }
 .metube-card-inspectable:hover { border-color: #8ab4f8; }
 .metube-inspector {
+  border: 1px solid #3ea6ff55;
+  border-radius: 10px;
+  padding: 12px;
+  margin: 10px 0;
+  background: #0f0f0f;
+}
+.metube-inspector-wrap {
+  border: 1px dashed #3ea6ff44;
+  border-radius: 10px;
+  padding: 12px;
+  margin: 10px 0;
+}
   background: #14161a; border: 1px solid #8ab4f8; border-radius: 12px;
   padding: 12px; margin: 12px 0; display: grid; gap: 10px;
 }
@@ -258,4 +270,109 @@ export const FEED_STYLES = `
 }
 .metube-feedback-exposure button:hover,
 .metube-feedback-preference button:hover { border-color: #8ab4f8; }
+
+/* ---------------------------------------------------------------------------
+ * Phase 5 product shell: tabs, quick switcher, active-Viewpoint header,
+ * autopsy, time machine, provenance chain, onboarding, portability.
+ * ------------------------------------------------------------------------- */
+.metube-shell { max-width: 760px; margin: 0 auto; }
+.metube-shell-header {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  justify-content: space-between; margin-bottom: 6px;
+}
+.metube-shell-title { margin: 0; font-size: 20px; }
+.metube-shell-close {
+  background: #2a2f36; color: #e8eaed; border: 1px solid #3a4048;
+  border-radius: 16px; padding: 4px 14px; font-size: 13px; cursor: pointer;
+}
+.metube-shell-close:hover { border-color: #8ab4f8; }
+.metube-active-strip {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  background: #14181d; border: 1px solid #2a2f36; border-radius: 10px;
+  padding: 8px 12px; margin-bottom: 12px; font-size: 13px;
+}
+.metube-active-strip .metube-active-name { color: #8ab4f8; font-weight: 600; }
+.metube-active-strip .metube-active-summary { color: #9aa0a6; flex: 1 1 200px; }
+.metube-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.metube-tab {
+  background: transparent; color: #9aa0a6; border: 1px solid transparent;
+  border-radius: 18px; padding: 5px 14px; font-size: 13px; cursor: pointer;
+}
+.metube-tab:hover { color: #e8eaed; background: #1c2128; }
+.metube-tab[data-active="true"] {
+  color: #8ab4f8; border-color: #8ab4f8; background: #14181d;
+}
+.metube-switcher { margin-bottom: 14px; }
+.metube-switcher select {
+  width: 100%; background: #1c1f24; color: #e8eaed;
+  border: 1px solid #3a4048; border-radius: 10px; padding: 8px 10px;
+  font-size: 13px;
+}
+.metube-autopsy { display: grid; gap: 10px; }
+.metube-autopsy-metric {
+  background: #1c1f24; border: 1px solid #2a2f36; border-radius: 10px;
+  padding: 10px 12px;
+}
+.metube-autopsy-metric h4 { margin: 0 0 4px; font-size: 13px; }
+.metube-autopsy-metric .metube-metric-value { color: #8ab4f8; font-size: 13px; }
+.metube-autopsy-metric p { margin: 4px 0 0; font-size: 12px; color: #9aa0a6; }
+.metube-timemachine { display: grid; gap: 10px; }
+.metube-tm-config {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  background: #14181d; border: 1px solid #2a2f36; border-radius: 10px;
+  padding: 8px 12px; font-size: 12px;
+}
+.metube-tm-config label { color: #9aa0a6; }
+.metube-tm-config input {
+  background: #1c1f24; color: #e8eaed; border: 1px solid #3a4048;
+  border-radius: 6px; padding: 3px 6px; font-size: 12px; width: 90px;
+}
+.metube-tm-period {
+  background: #1c1f24; border: 1px solid #2a2f36; border-radius: 10px;
+  padding: 10px 12px;
+}
+.metube-tm-period h4 { margin: 0 0 6px; font-size: 13px; }
+.metube-tm-period .metube-tm-count { color: #8ab4f8; font-size: 13px; }
+.metube-tm-period p { margin: 2px 0; font-size: 12px; color: #9aa0a6; }
+.metube-tm-note {
+  font-size: 11px; color: #9aa0a6; border-top: 1px dashed #2a2f36;
+  padding-top: 8px; margin-top: 4px;
+}
+.metube-provenance { display: grid; gap: 10px; }
+.metube-prov-step {
+  background: #14181d; border: 1px solid #2a2f36; border-radius: 10px;
+  padding: 10px 12px;
+}
+.metube-prov-step h4 { margin: 0 0 4px; font-size: 13px; }
+.metube-prov-step p { margin: 3px 0; font-size: 12px; color: #c8ccd0; }
+.metube-prov-step .metube-prov-meta { color: #9aa0a6; font-size: 11px; }
+.metube-onboarding {
+  display: grid; gap: 12px; max-width: 640px; margin: 40px auto;
+}
+.metube-onboarding h2 { margin: 0; }
+.metube-onboarding p { margin: 0; font-size: 14px; color: #c8ccd0; }
+.metube-onboarding ul { margin: 0; padding-left: 18px; font-size: 13px; color: #9aa0a6; }
+.metube-onboarding-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.metube-onboarding-actions button {
+  background: #2a2f36; color: #e8eaed; border: 1px solid #3a4048;
+  border-radius: 18px; padding: 8px 16px; font-size: 14px; cursor: pointer;
+}
+.metube-onboarding-actions button:hover { border-color: #8ab4f8; }
+.metube-portability { display: grid; gap: 10px; }
+.metube-portability-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.metube-portability-actions button,
+.metube-portability label {
+  background: #2a2f36; color: #e8eaed; border: 1px solid #3a4048;
+  border-radius: 18px; padding: 6px 14px; font-size: 13px; cursor: pointer;
+}
+.metube-portability-actions button:hover { border-color: #8ab4f8; }
+.metube-portability input[type="file"] { display: none; }
+.metube-portability-note { font-size: 12px; color: #9aa0a6; }
+.metube-portability-result { font-size: 13px; color: #8ab4f8; }
+.metube-fork-lineage {
+  font-size: 12px; color: #9aa0a6; border-left: 2px solid #2a2f36;
+  padding-left: 8px; margin: 6px 0 0;
+}
+.metube-saved-empty { color: #9aa0a6; font-size: 14px; }
+.metube-prov-unknown { color: #f5c26b; font-size: 12px; }
 `;

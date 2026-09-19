@@ -94,6 +94,15 @@ function renderViewpointRow(
     li.append(desc);
   }
 
+  // Phase 5 fork lineage: shown verbatim, never edited by the machine.
+  if (vp.forkedFrom) {
+    const lineage = document.createElement('p');
+    lineage.className = 'metube-fork-lineage';
+    lineage.textContent =
+      `Forked from "${vp.forkedFrom.viewpointTitle}" on ${vp.forkedFrom.forkedAt.slice(0, 10)} — changed assumption: ${vp.forkedFrom.changedAssumption}`;
+    li.append(lineage);
+  }
+
   const controls = document.createElement('div');
   controls.className = 'metube-vp-controls';
 
@@ -120,6 +129,26 @@ function renderViewpointRow(
     callbacks.onRefreshFeed();
   });
   controls.append(dup);
+
+  // Phase 5 fork flow: "Duplicate this Viewpoint and change one
+  // assumption." The changed assumption is user-authored text recorded
+  // verbatim in the fork's lineage; the user then edits the fork.
+  const fork = document.createElement('button');
+  fork.type = 'button';
+  fork.textContent = 'Duplicate & change one assumption…';
+  fork.addEventListener('click', async () => {
+    const changedAssumption = prompt(
+      `Fork "${vp.title}" — what is the ONE assumption you are changing?\n(e.g. "sample publications instead of independent creators", "widen the date window to 2024–2026")`,
+    );
+    if (changedAssumption === null || changedAssumption.trim() === '') return;
+    const title = prompt('Title for the forked Viewpoint', `${vp.title} — ${changedAssumption.trim()}`);
+    if (!title) return;
+    const forked = await repo.fork(vp.id, title, changedAssumption.trim());
+    callbacks.onRefreshFeed();
+    // Open the editor on the fork so the user applies the assumption.
+    openEditor(repo, forked, callbacks);
+  });
+  controls.append(fork);
 
   const del = document.createElement('button');
   del.type = 'button';
@@ -259,6 +288,12 @@ const CONFIG_FIELDS: Array<{
   { key: 'budget.minDistinctLanguages', label: 'EXPOSURE BUDGET — min distinct languages in the feed (recorded and reported; cannot be evaluated from available data)', kind: 'number' },
   { key: 'budget.minDistinctRegions', label: 'EXPOSURE BUDGET — min distinct regions (recorded and reported; cannot be evaluated from available data)', kind: 'number' },
   { key: 'budget.minDistinctScaleBands', label: 'EXPOSURE BUDGET — min distinct channel-scale bands (unknown-scale channels count as unknown)', kind: 'number' },
+  // Phase 5 Time Machine: user-authored anchor + period windows.
+  { key: 'timeMachine.anchorDate', label: 'TIME MACHINE — anchor date (YYYY-MM-DD; user-authored; periods are computed around it)', kind: 'text' },
+  { key: 'timeMachine.preEventDays', label: 'TIME MACHINE — pre-event window (days before the anchor)', kind: 'number' },
+  { key: 'timeMachine.duringEventDays', label: 'TIME MACHINE — during-event window (days starting at the anchor)', kind: 'number' },
+  { key: 'timeMachine.postEventDays', label: 'TIME MACHINE — post-event window (days after the during-event window)', kind: 'number' },
+  { key: 'timeMachine.retrospectiveAfterDays', label: 'TIME MACHINE — retrospective period starts this many days after the anchor', kind: 'number' },
 ];
 
 type ConfigFieldKey =
@@ -275,7 +310,10 @@ type ConfigFieldKey =
   | 'budget.minHistoricalShare' | 'budget.explorationShare'
   | 'budget.maxSingleTopicShare' | 'budget.repeatedChannelCooldown'
   | 'budget.repeatedNarrativeCooldown' | 'budget.minDistinctLanguages'
-  | 'budget.minDistinctRegions' | 'budget.minDistinctScaleBands';
+  | 'budget.minDistinctRegions' | 'budget.minDistinctScaleBands'
+  | 'timeMachine.anchorDate' | 'timeMachine.preEventDays'
+  | 'timeMachine.duringEventDays' | 'timeMachine.postEventDays'
+  | 'timeMachine.retrospectiveAfterDays';
 
 function openEditor(
   repo: ViewpointRepository,
@@ -328,6 +366,14 @@ function currentFieldValue(vp: Viewpoint | undefined, key: ConfigFieldKey): stri
     const v = budget?.[budgetKey];
     return v === undefined || v === null ? '' : String(v);
   }
+  if (key.startsWith('timeMachine.')) {
+    const tmKey = key.slice('timeMachine.'.length);
+    const tm = vp.config.timeMachine as unknown as Record<string, unknown> | undefined;
+    const v = tm?.[tmKey];
+    if (v === undefined || v === null) return '';
+    if (tmKey === 'anchorDate') return String(v).slice(0, 10);
+    return String(v);
+  }
   const v = (vp.config as unknown as Record<string, unknown>)[key as string];
   if (v === undefined || v === null) return '';
   if (Array.isArray(v)) return v.join(', ');
@@ -359,6 +405,24 @@ function applyFieldValue(config: ViewpointConfig, key: ConfigFieldKey, raw: stri
       }
     }
     target['exposureBudget'] = budget;
+    return;
+  }
+  if (key.startsWith('timeMachine.')) {
+    const tmKey = key.slice('timeMachine.'.length);
+    const tm = { ...((config.timeMachine as unknown as Record<string, unknown> | undefined) ?? {}) };
+    if (tmKey === 'anchorDate') {
+      if (trimmed === '') {
+        delete tm[tmKey];
+      } else {
+        // Accept YYYY-MM-DD or full ISO; store as full ISO date.
+        const iso = trimmed.length === 10 ? `${trimmed}T00:00:00Z` : trimmed;
+        tm[tmKey] = Number.isNaN(Date.parse(iso)) ? tm[tmKey] : iso;
+      }
+    } else {
+      const n = Number(trimmed);
+      tm[tmKey] = Number.isFinite(n) && n >= 0 ? Math.trunc(n) : 30;
+    }
+    target['timeMachine'] = Object.keys(tm).length > 0 ? tm : undefined;
     return;
   }
   if (key === 'explorationPercent') {

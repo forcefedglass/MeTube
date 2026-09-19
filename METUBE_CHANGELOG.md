@@ -2,6 +2,114 @@
 
 All notable changes to MeTube. Dates are system dates.
 
+## 2026-09-19 — Phase 5: daily-use product (v0.6.0)
+
+### Added
+
+- Firefox-first packaging: `npm run build:firefox` (dist-firefox/ with
+  `browser_specific_settings.gecko.id`, strict_min_version 115.0) and
+  `npm run package:firefox` (dependency-free zip writer →
+  `metube-firefox.xpi`, manifest.json first, integrity-checked). Chromium
+  path unchanged (`npm run build`).
+- Tabbed product shell: VIEWSTREAM / VIEWPOINTS / VIEWLISTS / COVERAGE /
+  SAVED — one mount, one persistent active-Viewpoint strip with a rapid
+  switcher (select) on every tab. No duplicate UI under SPA navigation,
+  full page loads, content-script re-execution (idempotent style
+  injection), or extension reload.
+- Onboarding gate (first run only): concise statement that MeTube does
+  not attempt to determine what the user should believe, an explanation
+  of Viewpoints as user-controlled sampling lenses, and two paths — add
+  five generic, fully editable starter Viewpoints, or start empty.
+  Starters are subject-mechanism demonstrations, not political
+  prescriptions.
+- Fork flow: "Duplicate this Viewpoint and change one assumption" —
+  `forkViewpoint` records `forkedFrom` lineage (source id, title, the
+  changed-assumption text, timestamp); lineage renders on the feed and
+  the manager.
+- Time Machine: per-Viewpoint temporal sampling around an anchor date —
+  pre-event / during-event / post-event / retrospective windows
+  (config: anchor date + four day-spans). `comparePeriods` produces
+  per-period candidate groups with an enforced standing note: MeTube
+  does not imply knowledge of causal relationships; it samples periods
+  as the user defines them.
+- Feed Autopsy (Coverage tab): 10 concentration/distribution metrics on
+  the composed feed — source, channel, narrative, topic, source-type
+  distribution, familiarity, temporal distribution, exploration percent,
+  budget compliance, pool-vs-feed. Descriptive facts, no verdicts.
+- Provenance chain: "Why this appeared" expanded to a five-step chain —
+  Viewpoint rule → discovery seed/provider/method → classification
+  (with confidence + evidence) → ranking components → final inclusion.
+  Unrecorded facts are stated as unrecorded; nothing is back-filled.
+- Portability: versioned export/import (`metube-export` v1). Default
+  export excludes feedback history (private data); feedback is an
+  explicit opt-in second export. Import validates format/version, merges
+  by explicit mode (keep-mine / import-wins), merges classification
+  overrides by videoId+dimension, applies the imported active Viewpoint
+  only when it resolves and is enabled. Wrong-format documents are
+  rejected with the observed format stated.
+- SAVED tab: explicit saves with captured-at ordering.
+- Starter Viewpoint set: Wide Open Sampling, Outside My Bubble, Mixed
+  Source Types, One Subject Many Angles, Deep History (temporal window
+  demonstration).
+
+### Changed
+
+- Import result reporting renders after tab re-render (previously the
+  result line was wiped by the tab refresh that followed it).
+- `feed-card` component table header built via DOM construction — no
+  `innerHTML` anywhere (youtube.com enforces TrustedHTML; one remaining
+  use broke the whole shell in Firefox/Chromium until removed).
+- `injectStyles` is idempotent (guards on the existing style element):
+  Firefox re-executes content scripts on reload; styles previously
+  duplicated each reload.
+- Version 0.6.0.
+
+### Verified
+
+- 160/160 tests pass (Phase 5 adds 17: time machine period math + no
+  causal language, autopsy metric invariants, provenance chain shape,
+  portability round-trip + merge modes + feedback opt-out/in + rejection
+  paths, fork lineage, onboarding state machine, starter seeding).
+- Firefox E2E (headless Firefox ESR 140.16.0 + geckodriver 0.37.1,
+  persistent-profile install of the packaged xpi), 26/26 checks:
+  persistent install; single injection + single style block; no
+  duplication across SPA pushState, full navigation, reload, and full
+  browser restart; onboarding gate with the no-belief statement; both
+  onboarding paths; five tabs; state preserved across tab cycles; rapid
+  Viewpoint switching recomposes per Viewpoint; Viewpoint isolation
+  (Deep History composes only pre-2026 material); 10 autopsy metrics;
+  Time Machine note + 5 config inputs; export default document
+  (format metube-export v1, 5 Viewpoints, no feedback key) read from
+  the download dir; feedback opt-in export carries a feedback array;
+  import round-trip through the real file input with result line;
+  wrong-format import rejected honestly; playback honestly disabled for
+  fixtures with no embed attempted; five-step provenance chain in the
+  card inspector; onboarding + active Viewpoint survive reload and
+  browser restart.
+- Chromium E2E regression (headless Playwright, dist build), all checks
+  pass: same matrix minus install mechanics (injection, onboarding,
+  tabs, switching, isolation, autopsy, Time Machine, provenance, fork,
+  export/import, SPA navigation, reload, no page errors).
+
+### Known limitations (honest)
+
+- The xpi is unsigned; installation requires
+  `xpinstall.signatures.required=false` (or Developer Edition /
+  Nightly). Firefox displays a one-time warning. No AMO listing.
+- Storage lives in IndexedDB on the youtube.com page origin (content
+  script context), not extension-origin storage — clearing site data
+  for youtube.com clears MeTube state. Export/import exists for
+  migration and backup.
+- Starter Viewpoint seed values are tuned so each mechanism is
+  demonstrable against the development fixture catalog; live YouTube
+  acquisition quality depends on `YouTubeWebProvider` page parsing,
+  which degrades to honest empty steps when layouts drift.
+- Fixture (development) mode activates only behind the explicit
+  `use-fixture-provider` KV flag; it is never the default user
+  experience.
+- Viewpoint editing remains prompt-based dialogs (deliberately plain);
+  no icons; feed overlay is full-screen.
+
 ## 2026-09-18 — Phase 4: the Viewstream composer (v0.5.0)
 
 ### Added

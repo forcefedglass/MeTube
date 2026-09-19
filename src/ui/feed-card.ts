@@ -103,7 +103,15 @@ function renderScoreTable(item: FeedCandidate): HTMLElement {
   const table = document.createElement('table');
   table.className = 'metube-component-table';
   const thead = document.createElement('thead');
-  thead.innerHTML = '<tr><th>Component</th><th>Value</th><th>Weighted</th></tr>';
+  // Built with DOM construction, never innerHTML: youtube.com enforces
+  // Trusted Types and blocks HTML string assignment.
+  const headRow = document.createElement('tr');
+  for (const label of ['Component', 'Value', 'Weighted']) {
+    const th = document.createElement('th');
+    th.textContent = label;
+    headRow.append(th);
+  }
+  thead.append(headRow);
   table.append(thead);
   const tbody = document.createElement('tbody');
   for (const name of RANK_COMPONENT_ORDER) {

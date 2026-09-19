@@ -1,5 +1,7 @@
 node_modules/
 dist/
 dist-test/
+dist-firefox/
+metube-firefox.xpi
 *.log
 .DS_Store

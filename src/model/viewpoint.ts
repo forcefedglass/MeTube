@@ -141,6 +141,38 @@ export interface ViewpointConfig {
    * src/model/exposure.ts.
    */
   exposureBudget: ExposureBudget;
+  /**
+   * Time Machine (Phase 5): user-authored temporal sampling for this
+   * Viewpoint. A named anchor date plus optional labels for the periods
+   * around it. All fields are user-authored facts about what to sample —
+   * never claims about what caused what. See src/viewpoints/timemachine.ts.
+   */
+  timeMachine?: TimeMachineConfig;
+}
+
+/**
+ * Time Machine configuration on a Viewpoint.
+ *
+ * DESCRIPTIVE RULES (FROZEN):
+ *   - The anchor date and period labels are user-authored. MeTube never
+ *     decides what counts as "the event".
+ *   - Periods are defined by the anchor: pre-event / during-event /
+ *     post-event / retrospective are TEMPORAL POSITIONS relative to the
+ *     anchor, computed from publication dates. A publication date that
+ *     cannot be established puts the candidate in 'unclassifiable' for
+ *     that period — never a guess.
+ *   - The comparison between periods is DESCRIPTIVE: counts and shares.
+ *     It never states or implies causal relationships between periods.
+ */
+export interface TimeMachineConfig {
+  /** User-authored ISO date the periods are computed around. */
+  anchorDate: Iso8601;
+  /** Window (days) each named period spans from the anchor. */
+  preEventDays: number;
+  duringEventDays: number;
+  postEventDays: number;
+  /** Retrospective period starts this many days after the anchor. */
+  retrospectiveAfterDays: number;
 }
 
 export interface Viewpoint {
@@ -152,6 +184,18 @@ export interface Viewpoint {
   enabled: boolean;
   createdAt: Iso8601;
   updatedAt: Iso8601;
+  /**
+   * Fork lineage (Phase 5): set when this Viewpoint was created by
+   * duplicating another and changing one assumption. The changed assumption
+   * is recorded verbatim (user-authored text); it is a statement about the
+   * fork operation, never an inferred difference.
+   */
+  forkedFrom?: {
+    viewpointId: ViewpointId;
+    viewpointTitle: string;
+    changedAssumption: string;
+    forkedAt: Iso8601;
+  };
 }
 
 /**
@@ -239,6 +283,30 @@ export function duplicateViewpoint(
  */
 export function structuredCloneConfig(config: ViewpointConfig): ViewpointConfig {
   return JSON.parse(JSON.stringify(config)) as ViewpointConfig;
+}
+
+/**
+ * Fork a Viewpoint (Phase 5): duplicate it AND record the single assumption
+ * the user changed, plus lineage. The changed assumption is user-authored
+ * text recorded verbatim — a statement about the fork operation, never an
+ * inferred difference.
+ */
+export function forkViewpoint(
+  source: Viewpoint,
+  id: ViewpointId,
+  title: string,
+  changedAssumption: string,
+  now: Iso8601,
+): Viewpoint {
+  return {
+    ...duplicateViewpoint(source, id, title, now),
+    forkedFrom: {
+      viewpointId: source.id,
+      viewpointTitle: source.title,
+      changedAssumption,
+      forkedAt: now,
+    },
+  };
 }
 
 /**

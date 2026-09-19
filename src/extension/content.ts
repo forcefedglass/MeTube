@@ -1,6 +1,10 @@
 /**
- * Content script entry point. Orchestration lives here:
- *   nav entry -> feed assembly -> card rendering -> feedback -> persistence.
+ * Content script entry point — Phase 5 product shell.
+ *
+ * Orchestration: nav entry -> tabbed shell -> per-tab surfaces ->
+ * feedback -> persistence. The five product tabs are VIEWSTREAM /
+ * VIEWPOINTS / VIEWLISTS / COVERAGE / SAVED; the active Viewpoint is
+ * always visible in the shell header, with a rapid switcher.
  *
  * Runs on youtube.com pages only (see manifest). It never reads YouTube's
  * own recommendations, never touches the watch history, and never
@@ -8,8 +12,7 @@
  */
 
 import { emptyUserProfile } from '../model/types';
-import type { FeedbackKind, UserFeedback, UserProfile } from '../model/types';
-import { PHASE4_FEEDBACK_KINDS, FEEDBACK_LABELS } from '../model/feedback';
+import type { UserProfile } from '../model/types';
 import { FixtureCandidateProvider } from '../discovery/fixture-provider';
 import { YouTubeWebProvider } from '../discovery/youtube-web';
 import type { PlanCapableProvider } from '../discovery/provider';
@@ -20,7 +23,6 @@ import {
   loadPool,
   FIXTURE_MODE_KEY,
 } from '../discovery/pool';
-import type { PoolState } from '../discovery/pool';
 import { toCandidateVideo } from '../discovery/pool';
 import { assembleViewstream } from '../viewpoints/viewstream';
 import { openLocalStore } from '../storage/local-store';
@@ -28,13 +30,11 @@ import type { LocalStore } from '../storage/local-store';
 import { insertNavEntry, ensureMount } from '../youtube/nav';
 import { renderFeedCard } from '../ui/feed-card';
 import { FEED_STYLES } from '../ui/styles';
-import { openViewpointRepository, VIEWPOINT_SEEDED_KEY } from '../viewpoints/repository';
-import { seedDemoViewpoints } from '../viewpoints/demo';
-import { summarizeViewpoint } from '../model/viewpoint';
+import { openViewpointRepository } from '../viewpoints/repository';
+import type { Viewpoint, TimeMachineConfig } from '../model/viewpoint';
 import { renderViewpointManager } from '../ui/viewpoint-manager';
 import { renderPoolInspector } from '../ui/pool-inspector';
 import { renderCandidateInspector } from '../ui/candidate-inspector';
-import { renderCoverageMap } from '../ui/coverage-map';
 import { FIXTURE_TOPICS } from '../discovery/fixtures';
 import { FIXTURE_CHANNELS } from '../discovery/fixtures';
 import { FIXTURE_NARRATIVE_CLUSTERS } from '../discovery/fixtures';
@@ -43,17 +43,33 @@ import { enrichCandidates } from '../classification/enrich';
 import { loadOverrides, setOverride, clearOverride } from '../classification/overrides';
 import type { ClassificationOverride } from '../model/classification';
 import { computeCoverageMap } from '../discovery/coverage';
-import type { ExposureReport } from '../model/exposure';
-import type { GenerationHistoryEntry } from '../model/exposure';
+import type { ExposureReport, GenerationHistoryEntry } from '../model/exposure';
 import { recordFeedbackThroughFirewall } from '../viewpoints/firewall';
 import type { FeedCandidate } from '../model/types';
-import {
-  findPerspectivePairs,
-  comparisonsForItem,
-} from '../viewpoints/pairing';
+import { findPerspectivePairs, comparisonsForItem } from '../viewpoints/pairing';
 import { computeBlindSpots } from '../viewpoints/blindspots';
 import { renderExposurePanel } from '../ui/exposure-panel';
 import { renderBlindSpotMap } from '../ui/blindspot-map';
+import { renderCoverageMap } from '../ui/coverage-map';
+import { renderShellHeader, renderTabBar } from '../ui/shell-header';
+import type { ShellTab } from '../ui/shell-header';
+import { renderAutopsyPanel } from '../ui/autopsy-panel';
+import { renderTimeMachinePanel } from '../ui/time-machine-panel';
+import { renderProvenancePanel } from '../ui/provenance-panel';
+import { renderOnboardingPanel } from '../ui/onboarding-panel';
+import { renderPortabilityPanel, renderPortabilityResult } from '../ui/portability-panel';
+import { renderSavedPanel } from '../ui/saved-panel';
+import {
+  readOnboardingState,
+  markOnboarded,
+  acceptStarters,
+} from '../viewpoints/onboarding';
+import { computeFeedAutopsy } from '../viewpoints/autopsy';
+import { comparePeriods } from '../viewpoints/timemachine';
+import { buildProvenanceChain } from '../viewpoints/provenance';
+import type { InclusionBasis } from '../viewpoints/provenance';
+import { buildExport, parseImport, mergeById, mergeFeedback } from '../viewpoints/portability';
+import type { ImportMode } from '../viewpoints/portability';
 
 const store: LocalStore = openLocalStore();
 
@@ -142,19 +158,37 @@ function summarizeExposureBudget(budget: import('../model/exposure').ExposureBud
 
 let feedVisible = false;
 let mounted = false;
-let panelMode: 'feed' | 'manager' = 'feed';
+let activeTab: ShellTab = 'viewstream';
 
-async function ensureSeeded(): Promise<void> {
-  const seeded = await store.getKv(VIEWPOINT_SEEDED_KEY);
-  if (seeded === true) return;
-  const repo = openViewpointRepository(store);
-  await seedDemoViewpoints(repo);
-  await store.putKv(VIEWPOINT_SEEDED_KEY, true);
+/** Last composed context — reused by tabs without recomposing. */
+interface ComposedContext {
+  snapshot: import('../model/types').FeedSnapshot;
+  exposureReport: ExposureReport | null;
+  poolCandidates: import('../model/types').CandidateVideo[];
+  lookup: (videoId: string) => import('../model/classification').VideoClassification | undefined;
+  overrides: ClassificationOverride[];
+  activeViewpoint: Viewpoint | null;
 }
 
-async function showFeed(): Promise<void> {
+let lastComposed: ComposedContext | null = null;
+
+/** Switch the active Viewpoint, then regenerate through the new lens. */
+async function switchViewpoint(viewpointId: string): Promise<void> {
+  const repo = openViewpointRepository(store);
+  try {
+    await repo.setActive(viewpointId);
+  } catch (err) {
+    console.warn('[MeTube] could not activate Viewpoint', err);
+    return;
+  }
+  lastComposed = null; // force recomposition through the new lens
+  await showTab('viewstream');
+}
+
+/** Open the shell on a given tab (default viewstream). */
+async function showTab(tab: ShellTab): Promise<void> {
+  activeTab = tab;
   feedVisible = true;
-  panelMode = 'feed';
   const mount = ensureMount();
   mount.className = 'metube-visible';
   if (!mounted) {
@@ -162,48 +196,115 @@ async function showFeed(): Promise<void> {
     injectStyles();
   }
   mount.replaceChildren();
-  const header = document.createElement('h2');
-  header.textContent = 'MeTube feed';
-  mount.append(header);
 
-  await ensureSeeded();
+  // First-run onboarding gate.
+  const state = await readOnboardingState(store);
+  if (!state.onboarded) {
+    mount.append(renderOnboardingShell());
+    return;
+  }
+
   const repo = openViewpointRepository(store);
-  const active = await repo.getActive();
-  const provider = await resolveProvider();
+  const [viewpoints, viewlists, active] = await Promise.all([
+    repo.list(),
+    repo.listViewlists(),
+    repo.getActive(),
+  ]);
 
-  let snapshot: import('../model/types').FeedSnapshot;
-  let lookup: (videoId: string) => import('../model/classification').VideoClassification | undefined =
-    () => undefined;
-  let overrides: ClassificationOverride[] = [];
-  let exposureReport: ExposureReport | null = null;
-  let poolCandidates: import('../model/types').CandidateVideo[] = [];
-  let pairingResult: import('../viewpoints/pairing').PairingResult | null = null;
+  const shell = document.createElement('div');
+  shell.className = 'metube-shell';
+
+  const header = document.createElement('header');
+  header.className = 'metube-shell-header';
+  const title = document.createElement('h2');
+  title.className = 'metube-shell-title';
+  title.textContent = 'MeTube';
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'metube-shell-close';
+  closeBtn.textContent = 'Close';
+  closeBtn.addEventListener('click', hideFeed);
+  header.append(title, closeBtn);
+  shell.append(header);
+
+  // Active Viewpoint always visible + rapid switcher.
+  shell.append(
+    renderShellHeader(viewpoints, active, {
+      onSwitch: (id) => void switchViewpoint(id),
+    }),
+  );
+  shell.append(
+    renderTabBar(activeTab, {
+      onSelect: (t) => void showTab(t),
+    }),
+  );
+
+  const body = document.createElement('div');
+  body.className = 'metube-shell-body';
+  switch (activeTab) {
+    case 'viewstream':
+      body.append(await renderViewstreamTab(active));
+      break;
+    case 'viewpoints':
+      body.append(await renderViewpointsTab(repo, viewpoints, viewlists, active));
+      break;
+    case 'viewlists':
+      body.append(await renderViewlistsTab(repo, viewpoints, viewlists, active));
+      break;
+    case 'coverage':
+      body.append(await renderCoverageTab(active));
+      break;
+    case 'saved':
+      body.append(await renderSavedTab());
+      break;
+  }
+  shell.append(body);
+  mount.append(shell);
+}
+
+/** The onboarding screen wrapped as the whole shell. */
+function renderOnboardingShell(): HTMLElement {
+  return renderOnboardingPanel({
+    onAcceptStarters: () => {
+      void acceptStarters(store).then(async (added) => {
+        await markOnboarded(store);
+        console.info(`[MeTube] ${added} starter Viewpoint(s) added (editable)`);
+        await showTab('viewstream');
+      });
+    },
+    onDecline: () => {
+      void markOnboarded(store).then(() => showTab('viewstream'));
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// VIEWSTREAM tab
+// ---------------------------------------------------------------------------
+
+async function composeNow(active: Viewpoint | null): Promise<ComposedContext> {
+  const provider = await resolveProvider();
+  const profile = await loadProfile();
   if (active) {
-    // Viewstream: acquire (or serve from pool cache), then compose through
-    // the active Viewpoint. Phase 4: composition runs under the
-    // Viewpoint's exposure budget with an honest per-rule report.
-    const profile = await loadProfile();
     const pool = await loadPool(store);
-    const { state: nextPool } = await acquireForViewpoint(store, provider as PlanCapableProvider, pool, {
-      viewpointId: active.id,
-      seedTopics: active.config.seedTopics,
-      seedConcepts: active.config.seedConcepts,
-      explicitChannels: active.config.seedChannels,
-      seedPlaylists: active.config.seedPlaylists,
-      resolveTopicLabel: makeTopicLabelResolver(),
-      now: nowIso(),
-    });
+    const { state: nextPool } = await acquireForViewpoint(
+      store, provider as PlanCapableProvider, pool,
+      {
+        viewpointId: active.id,
+        seedTopics: active.config.seedTopics,
+        seedConcepts: active.config.seedConcepts,
+        explicitChannels: active.config.seedChannels,
+        seedPlaylists: active.config.seedPlaylists,
+        resolveTopicLabel: makeTopicLabelResolver(),
+        now: nowIso(),
+      },
+    );
     const candidates = nextPool.entries.map(toCandidateVideo);
-    // Phase 3: classify + override -> enrichment. Topic and narrative
-    // cluster ids become real, Viewpoint filters and ranking start working
-    // on real candidates, and every classification carries its audit trail.
-    overrides = await loadOverrides(store);
+    const overrides = await loadOverrides(store);
     const catalog = workingCatalog();
     const enriched = enrichCandidates(candidates, catalog, overrides, nowIso());
-    lookup = classificationIndexFor(enriched);
+    const lookup = classificationIndexFor(enriched);
     const feedCandidates = enriched.map(({ classification: _cls, ...c }) => c);
-    poolCandidates = feedCandidates;
-    // Phase 4: generation history for cooldowns (survives sessions).
     const history = await loadGenerationHistory(store);
     const nextGeneration = history.length > 0
       ? Math.max(...history.map((h) => h.generation)) + 1
@@ -214,9 +315,6 @@ async function showFeed(): Promise<void> {
       nowIso(),
       { lookupClassification: lookup, history, generation: nextGeneration },
     );
-    snapshot = composed.snapshot;
-    exposureReport = composed.report;
-    // Record the generation entry for cooldown arithmetic on the next run.
     if (composed.snapshot.feed.length > 0) {
       await saveGenerationEntry(store, {
         generation: nextGeneration,
@@ -228,19 +326,49 @@ async function showFeed(): Promise<void> {
         ],
       });
     }
-    // Phase 4: perspective pairing over the composed feed (evidence-gated).
-    pairingResult = findPerspectivePairs(
-      composed.snapshot.feed.map((f) => f.candidate),
+    return {
+      snapshot: composed.snapshot,
+      exposureReport: composed.report,
+      poolCandidates: feedCandidates,
       lookup,
-    );
+      overrides,
+      activeViewpoint: active,
+    };
+  }
+  // Unlensed bootstrap feed.
+  const snapshot = await assembleFeed(provider, { limit: 8, profile }, nowIso());
+  await store.saveFeed(snapshot);
+  return {
+    snapshot,
+    exposureReport: null,
+    poolCandidates: [],
+    lookup: () => undefined,
+    overrides: [],
+    activeViewpoint: null,
+  };
+}
+
+async function renderViewstreamTab(active: Viewpoint | null): Promise<HTMLElement> {
+  const wrap = document.createElement('section');
+  const ctx = lastComposed ?? (lastComposed = await composeNow(active));
+  if (!active) {
+    const note = document.createElement('p');
+    note.textContent =
+      'Unlensed bootstrap feed: local fixtures only. Every score component is shown per card. ' +
+      'Activate a Viewpoint to generate a Viewstream.';
+    wrap.append(note);
+  } else {
     const banner = document.createElement('p');
     banner.className = 'metube-viewpoint-banner';
-    banner.textContent = `Active Viewpoint: ${active.title} — this Viewstream was generated through it.`;
-    mount.append(banner);
-    const summary = document.createElement('p');
-    summary.className = 'metube-viewpoint-summary';
-    summary.textContent = `Constraints: ${summarizeViewpoint(active)}`;
-    mount.append(summary);
+    banner.textContent = `This Viewstream was generated through "${active.title}".`;
+    wrap.append(banner);
+    if (active.forkedFrom) {
+      const lineage = document.createElement('p');
+      lineage.className = 'metube-fork-lineage';
+      lineage.textContent =
+        `Forked from "${active.forkedFrom.viewpointTitle}" — changed assumption: ${active.forkedFrom.changedAssumption}`;
+      wrap.append(lineage);
+    }
     if (active.config.assumptions.length > 0) {
       const assumptions = document.createElement('div');
       assumptions.className = 'metube-assumptions';
@@ -254,19 +382,16 @@ async function showFeed(): Promise<void> {
         ul.append(li);
       }
       assumptions.append(ul);
-      mount.append(assumptions);
+      wrap.append(assumptions);
     }
-  } else {
-    const note = document.createElement('p');
-    note.textContent = 'Unlensed bootstrap feed: local fixtures only. Every score component is shown per card. Activate a Viewpoint to generate a Viewstream.';
-    mount.append(note);
-    const profile = await loadProfile();
-    snapshot = await assembleFeed(provider, { limit: 8, profile }, nowIso());
   }
-  await store.saveFeed(snapshot);
+
   const list = document.createElement('div');
   list.className = 'metube-feed-list';
-  for (const item of snapshot.feed) {
+  const pairingResult = active
+    ? findPerspectivePairs(ctx.snapshot.feed.map((f) => f.candidate), ctx.lookup)
+    : null;
+  for (const item of ctx.snapshot.feed) {
     list.append(
       renderFeedCard(item, {
         onFeedback: (videoId, kind) => {
@@ -278,7 +403,7 @@ async function showFeed(): Promise<void> {
               current,
               videoId,
               kind,
-              active ? active.id : null,
+              ctx.activeViewpoint ? ctx.activeViewpoint.id : null,
               nowIso(),
             );
             return store.putKv('user-profile', next);
@@ -295,65 +420,167 @@ async function showFeed(): Promise<void> {
           });
         },
         // Phase 3: clicking a card opens the information-map inspector.
+        // Phase 5: the inspector gains the full provenance chain.
         onInspect: (clicked, card) => {
-          void openInspector(clicked, card, lookup, overrides);
+          void openInspector(clicked, card, ctx);
         },
         // Phase 4: evidenced comparisons with other treatments of the
         // same subject. Absent when no evidence supports a pairing.
         onCompare: pairingResult
-          && comparisonsForItem(item, pairingResult, poolCandidates).length > 0
+          && comparisonsForItem(item, pairingResult, ctx.poolCandidates).length > 0
           ? (card) => {
-              void openComparePanel(item, card, pairingResult, lookup, poolCandidates);
+              void openComparePanel(item, card, pairingResult!, ctx.lookup, ctx.poolCandidates);
             }
           : undefined,
       }),
     );
   }
-  mount.append(list);
+  wrap.append(list);
 
-  // Link to the manager from the feed itself: Viewpoints must be inspectable.
-  const manage = document.createElement('button');
-  manage.type = 'button';
-  manage.textContent = 'Manage Viewpoints';
-  manage.addEventListener('click', () => void showManager());
-  mount.append(manage);
-
-  // Phase 4: explicit regeneration. Re-runs acquisition (bypassing the
-  // pool TTL) and composes a fresh Viewstream through the same budget.
-  // Cooldowns and exposure budgets apply honestly; repeated regeneration
-  // never Manufactures new diversity.
+  const controls = document.createElement('div');
+  controls.className = 'metube-portability-actions';
   if (active) {
     const regenerate = document.createElement('button');
     regenerate.type = 'button';
     regenerate.textContent = 'Regenerate Viewstream';
-    regenerate.addEventListener('click', () => void refreshAcquisition().then(() => showFeed()));
-    mount.append(regenerate);
+    regenerate.addEventListener('click', () => {
+      void refreshAcquisition().then(() => {
+        lastComposed = null;
+        void showTab('viewstream');
+      });
+    });
+    controls.append(regenerate);
   }
+  wrap.append(controls);
 
-  // Phase 4: "Why this Viewstream looks like this" — exposure budget
-  // satisfaction and violations, fully visible, never hidden behind ML.
-  mount.append(
+  wrap.append(
     renderExposurePanel(
-      exposureReport,
+      ctx.exposureReport,
       active
         ? `Budget: ${summarizeExposureBudget(active.config.exposureBudget ?? {})}`
         : null,
     ),
   );
+  return wrap;
+}
 
-  // Phase 4: coverage / blind-spot view for the active Viewpoint.
+// ---------------------------------------------------------------------------
+// VIEWPOINTS tab
+// ---------------------------------------------------------------------------
+
+async function renderViewpointsTab(
+  repo: ReturnType<typeof openViewpointRepository>,
+  viewpoints: Viewpoint[],
+  viewlists: import('../model/viewpoint').Viewlist[],
+  active: Viewpoint | null,
+): Promise<HTMLElement> {
+  const wrap = document.createElement('section');
+  wrap.append(
+    renderViewpointManager(repo, viewpoints, viewlists, active ? active.id : null, {
+      onActivate: () => {
+        lastComposed = null;
+        void showTab('viewstream');
+      },
+      onRefreshFeed: () => void showTab('viewpoints'),
+    }),
+  );
+  return wrap;
+}
+
+// ---------------------------------------------------------------------------
+// VIEWLISTS tab
+// ---------------------------------------------------------------------------
+
+async function renderViewlistsTab(
+  repo: ReturnType<typeof openViewpointRepository>,
+  viewpoints: Viewpoint[],
+  viewlists: import('../model/viewpoint').Viewlist[],
+  active: Viewpoint | null,
+): Promise<HTMLElement> {
+  // Grouped-by-subject surface: the manager's Viewlist section, plus
+  // per-Viewpoint grouping of the user's Viewpoints into their lists.
+  const wrap = document.createElement('section');
+  const h = document.createElement('h3');
+  h.textContent = 'Viewlists — groups of Viewpoints by subject';
+  wrap.append(h);
+
+  if (viewpoints.length === 0) {
+    const p = document.createElement('p');
+    p.textContent = 'No Viewpoints yet. Create Viewpoints first.';
+    wrap.append(p);
+    return wrap;
+  }
+
+  const assigned = new Set<string>();
+  for (const list of viewlists) {
+    for (const id of list.viewpointIds) assigned.add(id);
+  }
+
+  const unassignedBox = document.createElement('div');
+  unassignedBox.className = 'metube-vp-viewlist';
+  const unassignedTitle = document.createElement('div');
+  unassignedTitle.className = 'metube-vp-viewlist-title';
+  unassignedTitle.textContent = 'Unassigned Viewpoints';
+  unassignedBox.append(unassignedTitle);
+  for (const vp of viewpoints) {
+    if (assigned.has(vp.id)) continue;
+    const label = document.createElement('div');
+    label.textContent = `${vp.title}${active && vp.id === active.id ? ' ●' : ''}`;
+    unassignedBox.append(label);
+  }
+  if (assigned.size < viewpoints.length) wrap.append(unassignedBox);
+
+  // Render the full interactive Viewlist management from the manager.
+  const manager = renderViewpointManager(
+    repo, viewpoints, viewlists, active ? active.id : null,
+    {
+      onActivate: () => {
+        lastComposed = null;
+        void showTab('viewstream');
+      },
+      onRefreshFeed: () => void showTab('viewlists'),
+    },
+  );
+  // Keep only the Viewlist section from the manager (the first section is
+  // the Viewpoint list, already shown on the VIEWPOINTS tab).
+  const listSection = manager.querySelector('.metube-vp-viewlists')?.cloneNode(true) as HTMLElement | undefined;
+  if (listSection) wrap.append(listSection);
+  else {
+    const p = document.createElement('p');
+    p.textContent = 'No Viewlists yet.';
+    wrap.append(p);
+  }
+  return wrap;
+}
+
+// ---------------------------------------------------------------------------
+// COVERAGE tab (autopsy + blind spots + coverage map + time machine)
+// ---------------------------------------------------------------------------
+
+async function renderCoverageTab(active: Viewpoint | null): Promise<HTMLElement> {
+  const wrap = document.createElement('section');
+
+  const ctx = lastComposed ?? (lastComposed = await composeNow(active));
+  const profile = await loadProfile();
+  const feedCands = ctx.snapshot.feed.map((f) => f.candidate);
+
+  // --- Feed autopsy --------------------------------------------------------
+  const autopsy = computeFeedAutopsy(
+    ctx.snapshot.feed,
+    ctx.poolCandidates,
+    ctx.activeViewpoint,
+    profile,
+    ctx.lookup,
+    ctx.exposureReport,
+    nowIso(),
+  );
+  wrap.append(renderAutopsyPanel(autopsy));
+
+  // --- Blind spots --------------------------------------------------------
   if (active) {
-    const blindSpots = computeBlindSpots(
-      poolCandidates,
-      snapshot.feed.map((f) => f.candidate),
-      lookup,
-      await loadProfile(),
-    );
-    mount.append(
+    const blindSpots = computeBlindSpots(ctx.poolCandidates, feedCands, ctx.lookup, profile);
+    wrap.append(
       renderBlindSpotMap(blindSpots, {
-        // User-initiated exploration from an underrepresented region:
-        // regenerate the feed seeded from that region. The region is a
-        // descriptive fact, not a recommendation to adopt a perspective.
         onExplore: (spot) => {
           void exploreFromRegion(active, spot);
         },
@@ -361,15 +588,247 @@ async function showFeed(): Promise<void> {
     );
   }
 
-  // Phase 3: the coverage map lives on the feed — representation is
-  // quantified every time the pool is inspected, never hidden.
-  const coverage = computeCoverageMap(
-    snapshot.feed.map((f) => f.candidate),
-    lookup,
-    await loadProfile(),
-    nowIso(),
+  // --- Coverage map --------------------------------------------------------
+  const coverage = computeCoverageMap(feedCands, ctx.lookup, profile, nowIso());
+  wrap.append(renderCoverageMap(coverage));
+
+  // --- Time Machine -------------------------------------------------------
+  wrap.append(
+    renderTimeMachinePanel(
+      active ? active.config.timeMachine : undefined,
+      active ? comparePeriods(ctx.poolCandidates, active.config.timeMachine ?? {
+        anchorDate: nowIso(),
+        preEventDays: 30,
+        duringEventDays: 7,
+        postEventDays: 30,
+        retrospectiveAfterDays: 60,
+      }, ctx.lookup) : null,
+      active !== null,
+      {
+        onConfigChange: (config: TimeMachineConfig) => {
+          void (async () => {
+            const repo = openViewpointRepository(store);
+            const current = active ? await repo.get(active.id) : undefined;
+            if (!current) return;
+            await repo.update({
+              ...current,
+              config: { ...current.config, timeMachine: config },
+              updatedAt: nowIso(),
+            });
+            await showTab('coverage');
+          })();
+        },
+      },
+    ),
   );
-  mount.append(renderCoverageMap(coverage));
+
+  // --- Portability (lives with coverage data: it moves the lenses) ---------
+  wrap.append(renderPortabilitySection());
+  return wrap;
+}
+
+/** Portability surface with wired export/import. */
+function renderPortabilitySection(): HTMLElement {
+  const wrap = renderPortabilityPanel({
+    onExport: (includeFeedback: boolean) => {
+      void (async () => {
+        const repo = openViewpointRepository(store);
+        const [viewpoints, viewlists, overrides, activeId, profile] = await Promise.all([
+          repo.list(),
+          repo.listViewlists(),
+          loadOverrides(store),
+          store.getKv('active-viewpoint-id'),
+          loadProfile(),
+        ]);
+        const doc = buildExport(
+          {
+            viewpoints,
+            viewlists,
+            classificationOverrides: overrides,
+            preferences: {
+              activeViewpointId: (activeId as string | null) ?? null,
+              fixtureMode: (await store.getKv(FIXTURE_MODE_KEY)) === true,
+            },
+            feedback: profile.feedback,
+          },
+          { includeFeedback },
+          nowIso(),
+        );
+        const blob = new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `metube-export-${nowIso().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      })();
+    },
+    onImport: (raw: unknown, mode: ImportMode) => {
+      void (async () => {
+        const result = parseImport(raw);
+        const mount = document.getElementById('metube-mount');
+        const section = mount?.querySelector('.metube-portability');
+        if (!result.ok) {
+          section?.querySelector('.metube-portability-result')?.remove();
+          section?.append(renderPortabilityResult(`Import rejected: ${result.error.message}`));
+          return;
+        }
+        const data = result.value;
+        const repo = openViewpointRepository(store);
+        const [myViewpoints, myViewlists, myOverrides, myProfile] = await Promise.all([
+          repo.list(),
+          repo.listViewlists(),
+          loadOverrides(store),
+          loadProfile(),
+        ]);
+        await (async () => {
+          // Merge + persist viewpoints.
+          const mergedVps = mergeById(myViewpoints, data.viewpoints, mode);
+          await store.putKv('viewpoints', mergedVps);
+          // Merge + persist viewlists.
+          const mergedLists = mergeById(myViewlists, data.viewlists, mode);
+          await store.putKv('viewlists', mergedLists);
+          // Merge overrides (by videoId+dimension key).
+          const overrideKey = (o: ClassificationOverride) => `${o.videoId}::${o.dimension}`;
+          const mine = new Map(myOverrides.map((o) => [overrideKey(o), o] as const));
+          const theirs = new Map(data.classificationOverrides.map((o) => [overrideKey(o), o] as const));
+          if (mode === 'import-wins') {
+            for (const [k, o] of mine) if (!theirs.has(k)) theirs.set(k, o);
+            await store.putKv('classification-overrides', [...theirs.values()]);
+          } else {
+            for (const [k, o] of theirs) if (!mine.has(k)) mine.set(k, o);
+            await store.putKv('classification-overrides', [...mine.values()]);
+          }
+          // Feedback: applied only when present in the import document.
+          if (data.feedback.length > 0) {
+            const merged = mergeFeedback(myProfile.feedback, data.feedback);
+            await store.putKv('user-profile', { ...myProfile, feedback: merged, updatedAt: nowIso() });
+          }
+          // Preferences: active viewpoint applied only when it resolves.
+          if (data.preferences.activeViewpointId) {
+            const exists = mergedVps.some((v) => v.id === data.preferences.activeViewpointId);
+            if (exists && mergedVps.find((v) => v.id === data.preferences.activeViewpointId)?.enabled) {
+              await store.putKv('active-viewpoint-id', data.preferences.activeViewpointId);
+            }
+          }
+        })();
+        lastComposed = null;
+        const message =
+          `Imported (mode: ${mode}): ${data.viewpoints.length} Viewpoint(s), ${data.viewlists.length} Viewlist(s), ` +
+          `${data.classificationOverrides.length} override(s)` +
+          (data.feedback.length > 0 ? `, ${data.feedback.length} feedback record(s)` : '') + '.';
+        // Re-render first: showTab wipes the mount, so the result line
+        // must be appended AFTER the fresh render, never before it.
+        await showTab('coverage');
+        document
+          .querySelector('#metube-mount .metube-portability')
+          ?.append(renderPortabilityResult(message));
+      })();
+    },
+  });
+  return wrap;
+}
+
+// ---------------------------------------------------------------------------
+// SAVED tab
+// ---------------------------------------------------------------------------
+
+async function renderSavedTab(): Promise<HTMLElement> {
+  const profile = await loadProfile();
+  const ctx = lastComposed ?? (lastComposed = await composeNow(await openViewpointRepository(store).getActive()));
+  return renderSavedPanel(profile, ctx.poolCandidates);
+}
+
+// ---------------------------------------------------------------------------
+// Inspector (with Phase 5 provenance chain)
+// ---------------------------------------------------------------------------
+
+/**
+ * Lookup wrapper over enriched candidates (videoId -> classification).
+ */
+function classificationIndexFor(
+  enriched: import('../classification/enrich').EnrichedCandidate[],
+): (videoId: string) => import('../model/classification').VideoClassification | undefined {
+  const index = new Map(enriched.map((c) => [c.id, c.classification]));
+  return (videoId) => index.get(videoId);
+}
+
+/**
+ * Open the candidate inspector below the clicked card. One inspector is
+ * open at a time; overrides persist through the store (surviving pool
+ * regeneration by design). Phase 5: the full five-step provenance chain
+ * renders above the dimension panels.
+ */
+async function openInspector(
+  item: import('../model/types').FeedCandidate,
+  card: HTMLElement,
+  ctx: ComposedContext,
+): Promise<void> {
+  const existing = document.querySelector('.metube-inspector-wrap');
+  if (existing) existing.remove();
+  const overrides = await loadOverrides(store);
+  const classification = ctx.lookup(item.candidate.id);
+
+  const chain = buildProvenanceChain({
+    item,
+    viewpoint: ctx.activeViewpoint,
+    classification,
+    poolProvenance: null, // pool provenance travels on PoolEntry; see note below
+    inclusion: inclusionBasisFor(item, ctx),
+  });
+
+  const panel = document.createElement('div');
+  panel.className = 'metube-inspector-wrap';
+  const infoMapPanel = renderCandidateInspector(item, classification, overrides, {
+    onSetOverride: (videoId, dimension, value, note) => {
+      void setOverride(store, {
+        videoId,
+        dimension,
+        value,
+        setAt: nowIso(),
+        note,
+      }).then(() => openInspector(item, card, ctx));
+    },
+    onClearOverride: (videoId, dimension) => {
+      void clearOverride(store, videoId, dimension).then(() =>
+        openInspector(item, card, ctx),
+      );
+    },
+    onClose: () => {
+      panel.remove();
+    },
+  });
+  panel.append(renderProvenancePanel(chain));
+  panel.append(infoMapPanel);
+  card.after(panel);
+}
+
+/**
+ * Inclusion basis: the composer's per-rule report states which rules were
+ * satisfied; the chain restates "main-walk" unless the item counts toward
+ * a floor or the exploration reservation. The arithmetic is the
+ * composer's; this maps it to the chain's vocabulary.
+ */
+function inclusionBasisFor(
+  item: FeedCandidate,
+  ctx: ComposedContext,
+): InclusionBasis {
+  if (!ctx.activeViewpoint) return { basis: 'main-walk' };
+  const budget = ctx.activeViewpoint.config.exposureBudget ?? {};
+  const positiveTopics = new Set(ctx.activeViewpoint.config.positiveTopicConstraints);
+  const isExploration =
+    positiveTopics.size > 0 &&
+    !item.candidate.topicIds.some((t) => positiveTopics.has(t));
+  if (isExploration && (budget.explorationShare ?? 0) > 0) {
+    return { basis: 'exploration-reservation' };
+  }
+  if (budget.minUnfamiliarChannelShare !== undefined) {
+    // Floor reservation is decided by the composer's reservation walk; the
+    // per-item basis is not separately recorded in the snapshot, so the
+    // chain reports the main walk and never invents a floor attribution.
+    return { basis: 'main-walk' };
+  }
+  return { basis: 'main-walk' };
 }
 
 /**
@@ -378,7 +837,7 @@ async function showFeed(): Promise<void> {
  * run, then regenerates the feed. No automatic retraining happens.
  */
 async function exploreFromRegion(
-  viewpoint: import('../model/viewpoint').Viewpoint,
+  viewpoint: Viewpoint,
   spot: import('../viewpoints/blindspots').BlindSpot,
 ): Promise<void> {
   const seedLabel = spot.key.replace(/-/g, ' ');
@@ -389,7 +848,8 @@ async function exploreFromRegion(
     seedLabel,
     requestedAt: nowIso(),
   });
-  await showFeed();
+  lastComposed = null;
+  await showTab('viewstream');
 }
 
 /**
@@ -436,8 +896,7 @@ async function openComparePanel(
       stp.textContent = `Classified source type: ${st.sourceType.value} (${st.sourceType.method}).`;
       li.append(stp);
     }
-    li.prepend(title, meta);
-    li.append(why);
+    li.append(title, meta, why);
     ul.append(li);
   }
   panel.append(ul);
@@ -447,92 +906,6 @@ async function openComparePanel(
   close.addEventListener('click', () => panel.remove());
   panel.append(close);
   card.after(panel);
-  void lookup;
-}
-
-/** Lookup wrapper over enriched candidates (videoId -> classification). */
-function classificationIndexFor(
-  enriched: import('../classification/enrich').EnrichedCandidate[],
-): (videoId: string) => import('../model/classification').VideoClassification | undefined {
-  const index = new Map(enriched.map((c) => [c.id, c.classification]));
-  return (videoId) => index.get(videoId);
-}
-
-/**
- * Open the candidate inspector below the clicked card. One inspector is
- * open at a time; overrides persist through the store (surviving pool
- * regeneration by design).
- */
-async function openInspector(
-  item: import('../model/types').FeedCandidate,
-  card: HTMLElement,
-  lookup: (videoId: string) => import('../model/classification').VideoClassification | undefined,
-  initialOverrides: ClassificationOverride[],
-): Promise<void> {
-  const existing = document.querySelector('.metube-inspector');
-  if (existing) existing.remove();
-  const overrides = await loadOverrides(store);
-  const classification = lookup(item.candidate.id);
-  const panel = renderCandidateInspector(item, classification, overrides, {
-    onSetOverride: (videoId, dimension, value, note) => {
-      void setOverride(store, {
-        videoId,
-        dimension,
-        value,
-        setAt: nowIso(),
-        note,
-      }).then(() => openInspector(item, card, lookup, overrides));
-    },
-    onClearOverride: (videoId, dimension) => {
-      void clearOverride(store, videoId, dimension).then(() =>
-        openInspector(item, card, lookup, overrides),
-      );
-    },
-    onClose: () => {
-      panel.remove();
-    },
-  });
-  card.after(panel);
-  void initialOverrides;
-}
-
-async function showManager(): Promise<void> {
-  feedVisible = true;
-  panelMode = 'manager';
-  const mount = ensureMount();
-  mount.className = 'metube-visible';
-  if (!mounted) {
-    mounted = true;
-    injectStyles();
-  }
-  mount.replaceChildren();
-  await ensureSeeded();
-  const repo = openViewpointRepository(store);
-  const [viewpoints, viewlists, activeId] = await Promise.all([
-    repo.list(),
-    repo.listViewlists(),
-    store.getKv('active-viewpoint-id'),
-  ]);
-  const activeVp = await repo.getActive();
-  const back = document.createElement('button');
-  back.type = 'button';
-  back.textContent = 'Back to feed';
-  back.addEventListener('click', () => void showFeed());
-  mount.append(back);
-  mount.append(
-    renderViewpointManager(repo, viewpoints, viewlists, activeVp ? activeVp.id : (activeId as string | null), {
-      onActivate: () => void showFeed(),
-      onRefreshFeed: () => void showManager(),
-    }),
-  );
-
-  // Pool inspector: acquisition is observable, always.
-  const pool = await loadPool(store);
-  mount.append(
-    renderPoolInspector(pool, nowIso(), () => {
-      void refreshAcquisition().then(() => showManager());
-    }),
-  );
 }
 
 /** Re-run acquisition for the active Viewpoint, bypassing the TTL cache. */
@@ -562,10 +935,13 @@ function hideFeed(): void {
 
 function toggleFeed(): void {
   if (feedVisible) hideFeed();
-  else void showFeed();
+  else void showTab('viewstream');
 }
 
 function injectStyles(): void {
+  // Idempotent: page reloads re-run the content script; a duplicate style
+  // block would double-apply every rule (observed as styles:2 in Firefox).
+  if (document.getElementById('metube-styles')) return;
   const style = document.createElement('style');
   style.id = 'metube-styles';
   style.textContent = FEED_STYLES;
