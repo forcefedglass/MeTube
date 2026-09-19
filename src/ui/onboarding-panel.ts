@@ -20,8 +20,12 @@ export function renderOnboardingPanel(callbacks: OnboardingCallbacks): HTMLEleme
   const wrap = document.createElement('section');
   wrap.className = 'metube-onboarding';
   const h = document.createElement('h2');
-  h.textContent = 'YourTube';
+  h.textContent = 'Slipgate';
   wrap.append(h);
+  const tagline = document.createElement('p');
+  tagline.className = 'metube-onboarding-tagline';
+  tagline.textContent = 'Escape Your Walled Garden.';
+  wrap.append(tagline);
   for (const paragraph of ONBOARDING_TEXT) {
     const p = document.createElement('p');
     p.textContent = paragraph;

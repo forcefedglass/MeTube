@@ -44,7 +44,7 @@ export function starterViewpoints(): Viewpoint[] {
     newViewpoint(
       'vp-starter-outside-bubble',
       'Outside My Usual Bubble',
-      `${STARTER_MARKER} — favors sources and topics YourTube has never shown you (strictly-unfamiliar channels, high exploration share). Demonstrates the unfamiliarity and exploration controls.`,
+      `${STARTER_MARKER} — favors sources and topics Slipgate has never shown you (strictly-unfamiliar channels, high exploration share). Demonstrates the unfamiliarity and exploration controls.`,
       NOW,
       {
         unfamiliarityTarget: 'strictly-unfamiliar',

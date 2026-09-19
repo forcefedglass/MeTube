@@ -32,7 +32,7 @@ export function renderCoverageMap(map: CoverageMap): HTMLElement {
   section.append(renderBuckets('Narrative clusters', map.narrativeClusters));
   section.append(renderBuckets('Temporal positions', map.temporalPositions));
   section.append(renderBuckets('Age of candidates', map.ageBands));
-  section.append(renderBuckets('Channel familiarity (within YourTube)', map.channelFamiliarity));
+  section.append(renderBuckets('Channel familiarity (within Slipgate)', map.channelFamiliarity));
   section.append(renderBuckets('Channels', map.channels));
   return section;
 }

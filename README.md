@@ -1,25 +1,37 @@
-# YourTube
+# Slipgate
 
-An independent discovery and recommendation layer for YouTube.
+**Escape Your Walled Garden.**
 
-**Product display name:** YourTube · **Internal project codename:** MeTube
+Slipgate is the public product identity of the project internally developed
+under the **MeTube** codename (same application, same repository — MeTube is
+the internal/project name, not a separate product).
 
-YourTube is **not** an ad blocker, a UI skin, a political-balance tool, or a
-re-ranker of YouTube's Home feed. It is a separate discovery pipeline that
-surfaces videos from independent sources, builds its own discovery graph,
-and plays them in an isolated session.
+Slipgate is an independent discovery layer for large recommendation-driven
+content ecosystems, beginning with YouTube. It gives the user another route
+through an information environment that would otherwise be selected and
+ordered by an opaque recommendation system: the platform supplies the
+corpus, Slipgate supplies an alternate route through it, Viewpoints
+determine how that route is constructed, Viewstreams expose material
+through those Viewpoints, and the user can inspect and control the
+selection logic.
 
-**Core principle:** *Don't predict what I want to believe. Help me see what
-I haven't seen.*
+Slipgate is **not** an ad blocker, a UI skin, a political-balance tool, or
+a re-ranker of YouTube's Home feed. It never reads YouTube's own
+recommendations. The tagline refers to escaping the constraints of an
+algorithmically cultivated information environment — not compromising,
+attacking, or bypassing computer security.
+
+**Product principle:** *Don't predict what I want to believe. Help me see
+what I haven't seen.*
 
 ## Status
 
 v0.6.0 (Phase 5, daily-use product). The full product surface runs on both
 Firefox and Chromium: Viewpoint-driven discovery, exposure-budget
 composition, feed autopsy, Time Machine, provenance chains, portability,
-and a tabbed shell. See `METUBE_CHANGELOG.md` for history,
-`METUBE_CRYSTALLIZATION.md` for the current-state record, and
-`METUBE_CONTEXT.md` for durable state.
+and a tabbed shell. See `METUBE_CRYSTALLIZATION.md` for the current-state
+record, `METUBE_CHANGELOG.md` for history, `METUBE_CONTEXT.md` for durable
+state.
 
 ## What it does
 
@@ -41,35 +53,38 @@ and a tabbed shell. See `METUBE_CHANGELOG.md` for history,
 - **Feedback** — explicit only, 12 kinds with declared semantics; exposure
   facts ("I watched this") never train preferences. The exploration
   firewall scopes every Viewpoint's training input.
-- **Portability** — versioned export/import (`metube-export` v1);
-  feedback history is private and exported only by explicit opt-in.
+- **Portability** — versioned export/import (a "Slipgate export" uses the
+  internal `metube-export` v1 format, kept for compatibility with existing
+  exports); feedback history is private and exported only by explicit
+  opt-in.
 - **Playback isolation** — real videos play in a sandboxed
   `youtube-nocookie.com` embed with cookies blocked and referrers
   suppressed. Session isolation, not anonymity (loading a video still
   contacts YouTube).
 
-YourTube does **not** attempt to determine what you should believe.
-Viewpoints are user-controlled lenses for sampling information differently
-— nothing more.
+Slipgate does **not** attempt to determine what you should believe, does
+not promise objective truth, does not define one canonical "other side",
+and does not represent a political ideology. Viewpoints are user-controlled
+lenses for sampling information differently — nothing more.
 
 ## Install (Firefox)
 
-The packaged extension is `metube-firefox.xpi`, built by
-`npm run package:firefox`. It is **unsigned**; Firefox release builds
-require a one-time preference change to install it:
+The packaged extension is `metube-firefox.xpi` (internal filename kept for
+compatibility), built by `npm run package:firefox`. It is **unsigned**;
+Firefox release builds require a one-time preference change to install it:
 
 1. Build (or download the repository and run):
    ```sh
    npm install --include=dev
    npm run build:firefox     # dist-firefox/ with gecko manifest settings
-   npm run package:firefox   # metube-firefox.xpi
+   npm run package:firefox  # metube-firefox.xpi
    ```
 2. Open `about:config` and set `xpinstall.signatures.required` → `false`.
    (On Firefox Developer Edition or Nightly this is already allowed.)
 3. Open `about:addons` → gear icon → "Install Add-on From File…" →
    select `metube-firefox.xpi` → confirm the one-time warning.
-4. Navigate to youtube.com. A "YourTube" entry appears in the guide (plus
-   a floating toggle if the guide is absent). Click it to open YourTube.
+4. Navigate to youtube.com. A "Slipgate" entry appears in the guide (plus
+   a floating toggle if the guide is absent). Click it to open Slipgate.
 
 First run shows the onboarding gate: accept five generic, fully editable
 starter Viewpoints, or start empty and author your own.
@@ -82,7 +97,7 @@ npm run build     # bundles dist/content.js + dist/manifest.json
 ```
 
 Then in Chromium: `chrome://extensions` → Developer mode → Load unpacked →
-select `dist/`. Navigate to youtube.com; a "YourTube" entry appears in the
+select `dist/`. Navigate to youtube.com; a "Slipgate" entry appears in the
 guide.
 
 ## Development
@@ -106,7 +121,7 @@ never the default user experience.
   No AMO listing.
 - **Storage lives on the youtube.com page origin** (content-script
   IndexedDB), not extension storage: clearing site data for youtube.com
-  clears YourTube state. Export/import is the backup and migration path.
+  clears Slipgate state. Export/import is the backup and migration path.
 - **Starter Viewpoint seeds are tuned to the development fixture catalog**
   so each mechanism is demonstrable in dev mode; live acquisition quality
   depends on YouTube page parsing, which degrades to honest empty steps

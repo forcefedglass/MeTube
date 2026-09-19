@@ -1,13 +1,15 @@
 # MeTube — durable project context
 
-**Product display name:** YourTube (user-facing surfaces only).
+**Public product name:** Slipgate · **Tagline:** Escape Your Walled Garden.
 **Internal/project codename:** MeTube — repository name, package name,
 IndexedDB DB `metube`, storage keys, `metube-*` DOM ids/CSS classes, export
 format `metube-export`, gecko id `metube@metube.local`, and the
 `METUBE_*.md` filenames all stay MeTube intentionally. Historical
 references stay historically accurate. Renaming any internal identifier
 breaks stored state, format compatibility, and E2E selectors — do not do
-it.
+it. The repository remains `forcefedglass/MeTube` unless explicitly
+changed in a future task. Public identity history: MeTube → YourTube →
+Slipgate; do not restore an earlier name as the public identity.
 
 ## Authoritative state record
 
@@ -21,7 +23,7 @@ toolchain facts, machine-specific validation recipes, and the decisions log.
 
 ## Thesis (FROZEN)
 
-MeTube (display name: YourTube) is an independent discovery and
+Slipgate (internal codename: MeTube) is an independent discovery and
 recommendation layer for YouTube. Not an ad blocker, UI skin,
 political-balance tool, or re-ranker of YouTube's Home feed. "Don't
 predict what I want to believe. Help me see what I haven't seen."
@@ -78,7 +80,7 @@ Principles.
   Handles can be reassigned by YouTube (empty channels); the pipeline
   reports empty steps honestly. Expect further drift; never fabricate.
 - Storage lives on the youtube.com page origin (content-script IndexedDB).
-  Clearing site data for youtube.com clears YourTube state. Export/import
+  Clearing site data for youtube.com clears Slipgate state. Export/import
   is the backup path. Extension-origin storage is an open question.
 
 ## Decisions log
@@ -127,7 +129,7 @@ Principles.
   requirement). No working-architecture rewrites for polish: new surfaces
   (autopsy, Time Machine, provenance, portability) are pure modules
   rendered by the existing UI pattern.
-- 2026-09-19 (Phase 5): Onboarding states YourTube does not attempt to
+- 2026-09-19 (Phase 5): Onboarding states Slipgate does not attempt to
   determine what the user should believe; starters are generic and
   editable, never politically prescriptive. Time Machine never implies
   causal knowledge (standing note, test-enforced). Portability exports
@@ -140,6 +142,24 @@ Principles.
   identifiers and historical references intentionally unchanged. Project
   state crystallized into METUBE_CRYSTALLIZATION.md; this file reduced to
   durable knowledge to avoid duplication.
+- 2026-09-19 (Slipgate identity): Public product identity changed to
+  Slipgate, tagline "Escape Your Walled Garden." — replaces YourTube
+  (interim public name) on all current user-facing surfaces: extension
+  display name + description (both manifests), YouTube nav entry +
+  floating toggle, shell heading, onboarding (heading + tagline +
+  body copy), Time Machine no-causal note, portability panel + export/
+  rejection messages, coverage-map familiarity heading, autopsy
+  familiarity detail, starter Viewpoint description, composer floor-rule
+  text, channel-familiarity labels, playback iframe title, package.json
+  description, README, docs/PRODUCT.md. Tagline shown only on onboarding
+  and README (restrained use). Internal MeTube identifiers (DB `metube`,
+  storage keys, `metube-*` DOM ids, export format `metube-export`,
+  `MeTubeExportV1`, gecko id `metube@metube.local`, xpi filename,
+  `METUBE_*.md` files, console prefixes, code comments) intentionally
+  unchanged for compatibility. The public UI calls an export a "Slipgate
+  export" while the underlying format identifier remains `metube-export`
+  (documented in the portability panel). No functional change; no stored
+  state, schema, or format compatibility affected.
 
 ## Verification commands
 

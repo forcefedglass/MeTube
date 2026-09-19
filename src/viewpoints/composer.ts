@@ -663,7 +663,7 @@ function buildReport(
       (item) => channelHasFeedback(item.candidate.channelId, profile, ranked.map((r) => r.candidate)) === false,
     ).length;
     add('minUnfamiliarChannelShare',
-      `At least ${(budget.minUnfamiliarChannelShare * 100).toFixed(0)}% of the feed from channels with no recorded YourTube feedback`,
+      `At least ${(budget.minUnfamiliarChannelShare * 100).toFixed(0)}% of the feed from channels with no recorded Slipgate feedback`,
       budget.minUnfamiliarChannelShare, observed, satisfied ? 'satisfied' : 'violated',
       satisfied
         ? `${unfamiliar}/${size} items are from unfamiliar channels.`

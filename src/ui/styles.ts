@@ -351,6 +351,7 @@ export const FEED_STYLES = `
 }
 .metube-onboarding h2 { margin: 0; }
 .metube-onboarding p { margin: 0; font-size: 14px; color: #c8ccd0; }
+.metube-onboarding .metube-onboarding-tagline { color: #9aa0a6; letter-spacing: 0.04em; }
 .metube-onboarding ul { margin: 0; padding-left: 18px; font-size: 13px; color: #9aa0a6; }
 .metube-onboarding-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .metube-onboarding-actions button {

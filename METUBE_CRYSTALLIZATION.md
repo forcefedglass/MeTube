@@ -1,10 +1,19 @@
-# YourTube — Crystallized Project State
+# Slipgate — Crystallized Project State
 
-**Product display name:** YourTube
+**Public product name:** Slipgate
+**Tagline:** Escape Your Walled Garden.
 **Internal/project codename:** MeTube (repository name, package name,
 IndexedDB database `metube`, storage keys, `metube-*` DOM ids/CSS classes,
 export format `metube-export`, gecko id `metube@metube.local`, file names
 `METUBE_*.md` — all intentionally unchanged).
+
+IDENTITY NOTE FOR FUTURE AGENTS: the public identity is **Slipgate** with
+the tagline **"Escape Your Walled Garden."** Do not restore MeTube,
+YourTube, or any previous name as the public identity, and do not change the
+tagline. MeTube and YourTube are historical/internal codenames only.
+"Slipgate" is the name; the walled-garden tagline refers to escaping an
+algorithmically cultivated information environment — never to compromising
+or bypassing computer security.
 
 This document is the crystallized state as of Phase 5 (v0.6.0, commit
 `bfdc6c5`, 2026-09-19). Read it before working on this repository. Do not
@@ -13,12 +22,18 @@ verified systems (see "Fixtures / Heuristics / Approximation Debt").
 
 ## Product Identity
 
-YourTube is an independent discovery and recommendation layer for YouTube.
-It is NOT an ad blocker, UI skin, political-balance tool, or re-ranker of
-YouTube's Home feed. It never reads YouTube's own recommendations. It
-exists for the exploration half of YouTube use: *help me see what I haven't
-seen* — without contaminating the user's normal YouTube recommendation
-profile.
+Slipgate is an independent discovery layer for large recommendation-driven
+content ecosystems, beginning with YouTube. The platform supplies the
+corpus; Slipgate supplies an alternate route through it. It is NOT an ad
+blocker, UI skin, political-balance tool, or re-ranker of YouTube's Home
+feed. It never reads YouTube's own recommendations. It does not promise
+objective truth, does not determine what the user should believe, does not
+define one canonical "other side", and does not represent a political
+ideology. It exists for the exploration half of YouTube use: *help me see
+what I haven't seen* — without contaminating the user's normal YouTube
+recommendation profile. The walled-garden metaphor refers to escaping the
+constraints of an algorithmically cultivated information environment; it
+implies nothing about system compromise or unauthorized access.
 
 ## Product in One Paragraph
 
@@ -67,7 +82,7 @@ over manufacturing diversity.
 
 ## Current User Experience
 
-On youtube.com a "YourTube" entry is injected into YouTube's side guide
+On youtube.com a "Slipgate" entry is injected into YouTube's side guide
 (floating toggle fallback when the guide is absent). Clicking it opens a
 full-screen overlay shell:
 
@@ -87,7 +102,7 @@ full-screen overlay shell:
   standing no-causal note), portability (export/import).
 - **SAVED** — explicit saves by captured-at.
 
-First run shows a one-time onboarding gate stating YourTube does not
+First run shows a one-time onboarding gate stating Slipgate does not
 attempt to determine what the user should believe, offering five generic
 editable starter Viewpoints or an empty start. The gate shows once
 (`onboarded` KV flag).
@@ -277,7 +292,7 @@ ids) are honestly disabled with a note; no embed is attempted.
 
 `storage/local-store.ts` — IndexedDB `metube` (DB_VERSION 1), stores
 `profile` / `feeds` / `kv`; in-memory fallback. Known limitation: lives on
-the youtube.com page origin — clearing site data clears YourTube state.
+the youtube.com page origin — clearing site data clears Slipgate state.
 
 `viewpoints/portability.ts` — export format `metube-export` v1: viewpoints,
 viewlists, classification overrides, preferences (active viewpoint id,
@@ -542,7 +557,7 @@ Only risks that materially matter to this codebase:
 
 4. **RISK: Explicit feedback quietly becomes an engagement optimizer.**
    'more-like-this' etc. feed similarity/relevance weights; a user pressing
-   them like a "like" button recreates a preference loop inside YourTube.
+   them like a "like" button recreates a preference loop inside Slipgate.
    CURRENT MITIGATION: firewall scopes signals per Viewpoint; semantics
    declared per kind; exposure facts never train; interpretation of
    signals is inspectable.
@@ -654,16 +669,23 @@ Only risks that materially matter to this codebase:
 ## Validation Snapshot
 
 - typecheck: clean. tests: 160/160. build (Chromium): ok.
-  build:firefox + package:firefox: ok (manifest name "YourTube", gecko id
+  build:firefox + package:firefox: ok (manifest name "Slipgate", gecko id
   `metube@metube.local`, v0.6.0, zip integrity ok).
 - Firefox E2E: 26/26 pass. Chromium E2E regression: all pass.
-- Display-name audit: all current user-facing surfaces say "YourTube";
+- Identity audit: all current user-facing surfaces say "Slipgate";
   internal identifiers, storage keys, format ids, and file names retain
   "MeTube" intentionally; historical changelog entries unchanged.
+- Current identity (post-Slipgate pass): manifest name "Slipgate" in both
+  build targets; public tagline "Escape Your Walled Garden." shown on
+  onboarding and README only.
 
 ## Current Commit
 
 This crystallization pass records the repository at Phase 5, v0.6.0
 (`bfdc6c5`, "Phase 5: daily-use product (v0.6.0)", branch main). The
-crystallization commit itself is made directly on top with message
-"crystallize YourTube project state".
+crystallization commit ("crystallize YourTube project state", `284ddde`)
+was followed by the Slipgate identity pass ("adopt Slipgate product
+identity"). Public identity history: MeTube (internal codename and
+original public name) → YourTube (interim public name, 2026-09-19) →
+Slipgate (current public name, with tagline "Escape Your Walled Garden.").
+Internal identifiers have been "MeTube" throughout and remain so.

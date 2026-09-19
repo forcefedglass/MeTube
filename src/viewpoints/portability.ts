@@ -95,7 +95,7 @@ export function buildExport(
     version: EXPORT_VERSION,
     exportedAt: now,
     contents:
-      `YourTube export v${EXPORT_VERSION}: ${data.viewpoints.length} Viewpoint(s), ` +
+      `Slipgate export v${EXPORT_VERSION}: ${data.viewpoints.length} Viewpoint(s), ` +
       `${data.viewlists.length} Viewlist(s), ${data.classificationOverrides.length} classification override(s), ` +
       `preferences (active viewpoint${data.preferences.activeViewpointId ? `: ${data.preferences.activeViewpointId}` : ': none'}; fixture mode: ${data.preferences.fixtureMode ? 'on' : 'off'}).` +
       (options.includeFeedback
@@ -123,19 +123,19 @@ export function buildExport(
  */
 export function parseImport(raw: unknown): ImportResult<PortabilityData> {
   if (typeof raw !== 'object' || raw === null) {
-    return { ok: false, error: { message: 'Not a YourTube export: the file is not a JSON object.' } };
+    return { ok: false, error: { message: 'Not a Slipgate export: the file is not a JSON object.' } };
   }
   const doc = raw as Record<string, unknown>;
   if (doc.format !== EXPORT_FORMAT) {
     return {
       ok: false,
-      error: { message: `Not a YourTube export: expected format "${EXPORT_FORMAT}", found ${JSON.stringify(doc.format)}.` },
+      error: { message: `Not a Slipgate export: expected format "${EXPORT_FORMAT}", found ${JSON.stringify(doc.format)}.` },
     };
   }
   if (doc.version !== EXPORT_VERSION) {
     return {
       ok: false,
-      error: { message: `Unsupported YourTube export version: ${JSON.stringify(doc.version)} (this build reads version ${EXPORT_VERSION} only).` },
+      error: { message: `Unsupported Slipgate export version: ${JSON.stringify(doc.version)} (this build reads version ${EXPORT_VERSION} only).` },
     };
   }
   if (!Array.isArray(doc.viewpoints)) {

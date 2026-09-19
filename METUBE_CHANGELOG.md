@@ -2,6 +2,62 @@
 
 All notable changes to MeTube. Dates are system dates.
 
+## 2026-09-19 — Slipgate product identity
+
+### Changed
+
+- Public product identity is now **Slipgate** (tagline: **Escape Your
+  Walled Garden.**), replacing the interim public name YourTube. The
+  walled-garden tagline refers to escaping the constraints of an
+  algorithmically cultivated information environment; it implies nothing
+  about compromising, attacking, or bypassing computer security, and
+  nothing about account or system compromise.
+- Updated user-facing surfaces: extension display name + description
+  (both build targets' manifests), YouTube sidebar nav entry + floating
+  toggle, shell heading, onboarding (heading, tagline, body copy),
+  Time Machine no-causal note, portability panel prose + export/rejection
+  messages, coverage-map familiarity heading, autopsy familiarity detail,
+  starter Viewpoint description, composer floor-rule text,
+  channel-familiarity labels, playback iframe title, package.json
+  description, README (retitled), docs/PRODUCT.md.
+- Tagline used selectively: onboarding first-run presentation and README
+  only; the normal working interface identifies the product simply as
+  "Slipgate".
+- README states explicitly that Slipgate is the public product identity
+  of the project internally developed under the MeTube codename (same
+  application, not separate products).
+- METUBE_CRYSTALLIZATION.md Product Identity section + identity note
+  updated so future agents cannot restore MeTube, YourTube, or a previous
+  tagline as the public identity; METUBE_CONTEXT.md records the identity
+  decision and history.
+- Portability panel now documents the legacy `metube-export` v1 format
+  identifier as an internal compatibility identifier (a "Slipgate export"
+  uses the `metube-export` format unchanged).
+
+### Unchanged (intentional)
+
+- Internal/project codename MeTube: repository name/URL, package name
+  (`metube`), IndexedDB database `metube`, storage keys, `metube-*` DOM
+  ids/CSS classes, export format identifier `metube-export`,
+  `MeTubeExportV1` interface, gecko id `metube@metube.local`, xpi filename
+  `metube-firefox.xpi`, `METUBE_*.md` file names, code comments, console
+  prefixes, historical changelog entries. Renaming any of these would
+  break stored user state, format compatibility, or E2E selectors.
+- No discovery/ranking behavior change; no stored user state, schema, or
+  export/import compatibility change; version stays 0.6.0.
+
+### Verified
+
+- typecheck clean; tests 160/160; Chromium build, Firefox build, and xpi
+  packaging succeed; generated manifests in dist/ and dist-firefox/ and
+  the packaged xpi present the extension publicly as "Slipgate" with the
+  internal gecko id unchanged.
+- Firefox E2E 26/26 and Chromium E2E regression all-pass with the Slipgate
+  build (both matrices assert on `metube-*` DOM ids, not display strings).
+- Identity audit: no current user-facing surface presents MeTube or
+  YourTube as the current product name; remaining occurrences are
+  internal/compatibility identifiers or accurate historical records.
+
 ## 2026-09-19 — crystallization pass
 
 ### Added

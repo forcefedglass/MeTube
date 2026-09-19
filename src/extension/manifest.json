@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "YourTube",
+  "name": "Slipgate",
   "version": "0.6.0",
-  "description": "An independent discovery and recommendation layer for YouTube. Local-first, explicit-feedback-only, no backend.",
+  "description": "Escape Your Walled Garden. An independent discovery layer that lets you explore beyond your normal recommendation feed through user-controlled Viewpoints.",
   "permissions": [],
   "host_permissions": [],
   "content_scripts": [

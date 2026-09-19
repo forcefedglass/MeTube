@@ -136,7 +136,7 @@ export function renderTimeMachinePanel(
   note.textContent =
     'Periods are publication-date positions relative to a user-authored anchor. Comparisons between ' +
     'pre-event, during-event, post-event, and retrospective material are descriptive: counts and ' +
-    'distributions only. YourTube does not imply knowledge of causal relationships unless evidence ' +
+    'distributions only. Slipgate does not imply knowledge of causal relationships unless evidence ' +
     'supports them — and publication timing alone is never such evidence.';
   wrap.append(note);
   return wrap;

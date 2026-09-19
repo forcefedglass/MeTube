@@ -39,8 +39,8 @@ export function buildNavEntry(): HTMLElement {
   const item = document.createElement('a');
   item.id = METUBE_NAV_ID;
   item.setAttribute('href', '#');
-  item.textContent = 'YourTube';
-  item.title = 'YourTube — independent discovery feed';
+  item.textContent = 'Slipgate';
+  item.title = 'Slipgate — independent discovery feed';
   return item;
 }
 
@@ -75,8 +75,8 @@ export function insertNavEntry(onActivate: () => void): HTMLElement | null {
     floating = document.createElement('button');
     floating.id = METUBE_FLOATING_ID;
     (floating as HTMLButtonElement).type = 'button';
-    floating.textContent = 'YourTube';
-    floating.title = 'YourTube — independent discovery feed';
+    floating.textContent = 'Slipgate';
+    floating.title = 'Slipgate — independent discovery feed';
     document.body.appendChild(floating);
   }
   if (!floating.dataset.wired) {

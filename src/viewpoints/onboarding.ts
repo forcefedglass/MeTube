@@ -26,10 +26,10 @@ export const ONBOARDED_KEY = 'onboarded';
 
 /** The exact first-run statement. Facts about the tool, nothing else. */
 export const ONBOARDING_TEXT = [
-  'YourTube is an independent layer over YouTube discovery. It never reads YouTube\'s own recommendations.',
-  'YourTube does not attempt to determine what you should believe. There is no political scoring, no "correct balance", and no recommended mix of perspectives anywhere in it.',
+  'Slipgate is an independent layer over YouTube discovery. It never reads YouTube\'s own recommendations.',
+  'Slipgate does not attempt to determine what you should believe. There is no political scoring, no "correct balance", and no recommended mix of perspectives anywhere in it.',
   'A Viewpoint is a lens you author: seeds, constraints, exposure budgets. Activating one generates a Viewstream — a feed sampled through that lens. Every field is visible and editable, and every inclusion is traceable (Viewpoint rule → discovery → classification → ranking → inclusion).',
-  'Everything stays on this device. YourTube has no backend and records feedback only from buttons you press.',
+  'Everything stays on this device. Slipgate has no backend and records feedback only from buttons you press.',
 ];
 
 export interface OnboardingState {
